@@ -171,9 +171,9 @@ parms.orig <- c(
   u.c = 1,      # Clearance co-colonised (natural)
   a = 0.16      # Clearance sensitive (drug-induced)
 ) * 12 / 365.25 # convert to daily
-# MDA parameters
+#MDA parameters
 #parms.orig$mda_cov= 0
-#parms.orig$mda_cycle = 365       # Period between 2 mda
+#parms.orig$mda_cycle = 365        # Period between 2 mda
 #parms.orig$mda_duration = 2*30    # mda campaign duration in days
 
 parms.orig[["c"]] <- 0.1  # cost of resistance on transmission
@@ -334,4 +334,5 @@ plot(
   xlab = "Consumption", ylab = "Resistance Proportion",
   main = "Resistance and consumption"
 )
+
 
