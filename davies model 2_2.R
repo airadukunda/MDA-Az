@@ -95,6 +95,33 @@ group_durations_days <- group_durations_years * 365
 
 popmort[, 5] <- 1000 * popmort[, 5] / (1 * popstruc[, 5] * 365.25)
 mort <- popmort[, 5]
+
+#1.h.Contact matrix  and visualization
+(m_contact_1y <- as.matrix(read.csv("3.U.1.contact_Afghanistan_1y.csv")))
+dim(m_contact_1y)
+
+for(i in 1:n_age){
+  for(j in 1:n_age){
+    m_contact_1y[i,j]<-m_contact_1y[i,j]/25
+  }
+}
+colnames(m_contact_1y ) <-c(as.character(0:99), "100+")
+rownames(m_contact_1y ) <- c(as.character(0:99), "100+")
+m_contact_1y 
+#Visualization of my contact matrix
+pacman::p_load(ggplot2,reshape2)
+#data frame
+#df <- melt(m_contact_1y )
+df <- reshape2::melt(m_contact_1y)
+colnames(df) <- c("Contactee", "Contactor", "Contacts")
+#plot contact matrix
+(p<-ggplot(df, aes(x = Contactor, y = Contactee, fill = Contacts)) +
+    geom_tile() +
+    scale_fill_gradient(low = "white", high = "red") +
+    theme_minimal() +
+    labs(title = "Contact Matrix Heatmap for Afghanistan")
+)
+
 # Back into work environment
 setwd("C:/Disk F/4.Oxford Modelling for Global Health/Afox_Ubuntu/Afox Placement with Ben Cooper")
 
@@ -124,15 +151,21 @@ bacteria.odes <- function(t, state, parameters) {
     S.tot <- S + Sr  # Susceptible co-colonised total
     R.tot <- R + Rs  # Resistance co-colonised total
     
-    lamda.S <- beta.S * sum(S.tot)  # 
-    lamda.R <- beta.R * sum(R.tot)  # 
+    #lamda.S <- beta.S *(m_contact_1y %*% sum(S.tot)) # 
+    #lamda.R <- beta.R *(m_contact_1y %*%  sum(R.tot)) # 
     
+    lamda.S <- beta.S * (m_contact_1y %*% S.tot)   # vectorized force of infection
+    lamda.R <- beta.R * (m_contact_1y %*% R.tot)
+    
+    
+  
     #Intervention : MDA implementation
-    #mda_targeted_ages <- 0:5       # Targeting 
+    
+    #mda_targeted_ages <- 0:5        # Targeting 
     #azt <- rep(0, n_age)            # Initialize azt vector
     #azt[mda_targeted_ages] <- 1 
     
-    #Frequence of MDA (once per year according to the WHO guidlnes)
+    #Frequency of MDA (once per year according to the WHO guidlnes)
     #time_in_cycle <- t %% mda_cycle
     # mda_active <- (time_in_cycle < mda_duration) * 1
     # mda starting after 2025 (25 years from start year 2000)
@@ -157,24 +190,29 @@ bacteria.odes <- function(t, state, parameters) {
     list(c(dX, dS, dR, dSr, dRs))
   })
 }
-
 bacteria.solve <- function(t, state, parameters) {
-  parameters["beta.R"] <- parameters["beta.S"] * (1 - parameters["c"])
+  parameters[["beta.R"]] <- parameters[["beta.S"]] * (1 - parameters[["c"]])
   out <- as.data.frame(ode(state, t, bacteria.odes, parameters))
   return(out)
 }
+
+
 # Parameters
-parms.orig <- c(
-  beta.S = 5,   # transmission of sensitive
-  u.S = 1,      # Clearance sensitive (natural)
-  u.R = 1,      # Clearance resistant (natural) - lower than susc
-  u.c = 1,      # Clearance co-colonised (natural)
-  a = 0.16      # Clearance sensitive (drug-induced)
-) * 12 / 365.25 # convert to daily
-#MDA parameters
-#parms.orig$mda_cov= 0
-#parms.orig$mda_cycle = 365        # Period between 2 mda
-#parms.orig$mda_duration = 2*30    # mda campaign duration in days
+parms.orig <- list(
+  beta.S = 5,              # transmission of sensitive
+  u.S = 1,                 # Clearance sensitive (natural)
+  u.R = 1,                 # Clearance resistant (natural) - lower than susc
+  u.c = 1,                 # Clearance co-colonised (natural)
+  a = 0.16,                # Clearance sensitive (drug-induced)
+  m_contact = m_contact_1y #contacts parameters (per day)
+  )
+# Convert daily
+parms.orig[1:5] <- lapply(parms.orig[1:5], function(x) x*12/365.25)# convert to daily
+
+# MDA parameters
+#parms.orig["mda_cov"]= 0
+#parms.orig["mda_cycle"]mda_cycle = 365        # Period between 2 mda
+#parms.orig["mda_duration"] = 2*30             # mda campaign duration in days
 
 parms.orig[["c"]] <- 0.1  # cost of resistance on transmission
 parms.orig[["k"]] <- 0.5  # efficiency of co-colonisation
@@ -186,7 +224,7 @@ state.orig <- c(
   Sr = rep(0, n_age),    # drug-sensitive, treated
   Rs = rep(0, n_age)     # drug-resistant, treated
 )
-tvec <- seq(0, 365.25 * 20, 1) # 20 years
+tvec <- seq(0, 365.25 *1, 1) # 20 years
 # Run model
 parms <- parms.orig
 state <- state.orig
@@ -209,13 +247,14 @@ colnames(results_Afghanistan) <- col_names
 names(results_Afghanistan)
 
 # Plot model
-cols <- viridis(4)
+cols <- viridis(5)
 
 par(mfrow = c(1, 1))
 #Total across age groups: Here i will use Index
-X_total <- rowSums(out[, Xindex + 1])  # Here i added +1 because first column is time
-S_total <- rowSums(out[, Sindex + 1])
-R_total <- rowSums(out[, Rindex + 1]) + rowSums(out[, Rsindex + 1])
+X_total <- rowSums(out[,  Xindex + 1])  # Here i added +1 because first column is time
+S_total <- rowSums(out[,  Sindex + 1])
+R_total <- rowSums(out[,  Rindex + 1]) 
+Rs_total <- rowSums(out[, Rsindex + 1])
 Sr_total <- rowSums(out[, Srindex + 1])
 #Visualization
 plot(
@@ -224,22 +263,22 @@ plot(
   col = cols[1],
   las = 1,
   xaxs = "i", yaxs = "i",
-  ylim = c(0, max(c(X_total, S_total, R_total, Sr_total))),
+  ylim = c(0, max(c(X_total, S_total, R_total,Rs_total, Sr_total))),
   bty = "n",
   lwd = 2.5,
   xlab = "Day", ylab = "Proportion",
   main = "Population level Bacterial Dynamics over time"
 )
-
 lines(out$time, S_total, col = cols[2], lwd = 2.5)
 lines(out$time, R_total, col = cols[3], lwd = 2.5)
-lines(out$time, Sr_total, col = cols[4], lwd = 2.5)
+lines(out$time, Rs_total, col = cols[4], lwd = 2.5)
+lines(out$time, Sr_total, col = cols[5], lwd = 2.5)
 
 legend(
   "topright",
   bty = "n",
   col = c(cols),
-  legend = c("X_total", "S_total", "R_total", "Sr_total"),
+  legend = c("X_total", "S_total", "R_total","Rs_total", "Sr_total"),
   lty = 1,
   lwd = 1.2,
   ncol = 2
@@ -299,12 +338,16 @@ plot <- ggplot(Final_Afghanistan_summary,
   scale_fill_manual(values = c("X" = "#00c4aa", "S" = "#e573f3", 
                                "R" = "#00b3f4", "Sr" = "#9b9602", "Rs" = "#fc726c"))
 print(plot)
+plot1 <- ggplot(Final_Afghanistan_summary, 
+               aes(x = age_group, y = proportion, fill = compartment)) +
+  geom_col(position = "dodge",col= NA) +#or dodge
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 8)) +
+  labs(title = " Population level Bacterial Dynamics over time in Afghanistan", x = "Age", y = "Percent ") +
+  scale_fill_manual(values = c("X" = "#00c4aa", "S" = "#e573f3", 
+                               "R" = "#00b3f4", "Sr" = "#9b9602", "Rs" = "#fc726c"))
+print(plot1)
 table(Final_Afghanistan_summary$compartment)
-
-
-
-
-
 
 # Resistance consumption curve at k = 0.5
 avec <- seq(0, 2, 0.1)
@@ -314,7 +357,7 @@ for (ii in seq_along(avec)) {
   parms[["a"]] <- avec[ii] / 365.25
   out <- bacteria.solve(tvec, state, parms)
   
-  # Fixed: calculate resistance proportion correctly
+  # Resistance proportion 
   R_final <- rowSums(out[nrow(out), Rindex + 1]) + rowSums(out[nrow(out), Rsindex + 1])
   X_final <- rowSums(out[nrow(out), Xindex + 1])
   
@@ -334,6 +377,4 @@ plot(
   xlab = "Consumption", ylab = "Resistance Proportion",
   main = "Resistance and consumption"
 )
-
-
 
