@@ -128,7 +128,7 @@ bacteria.odes <- function(t, state, parameters) {
     lamda.R <- beta.R * sum(R.tot)  # 
     
     #Intervention : MDA implementation
-    #mda_targeted_ages <- 6:15       # Targeting 
+    #mda_targeted_ages <- 0:5       # Targeting 
     #azt <- rep(0, n_age)            # Initialize azt vector
     #azt[mda_targeted_ages] <- 1 
     
@@ -334,5 +334,6 @@ plot(
   xlab = "Consumption", ylab = "Resistance Proportion",
   main = "Resistance and consumption"
 )
+
 
 
