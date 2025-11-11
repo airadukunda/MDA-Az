@@ -1,0 +1,20 @@
+
+# R / RStudio
+.Rhistory
+.RData
+.Rproj.user/
+.Ruserdata
+*.Rproj
+
+# Outputs and temp
+outputs/
+*.csv
+*.png
+*.pdf
+*.rds
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
