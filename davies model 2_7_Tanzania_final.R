@@ -369,21 +369,21 @@ parms.orig <- list(
   mda_cycle = 365,         # MDA frequency
   mda_duration = 30,       # MDA duration
   mda_cov =  0.6,          # MDA coverage
-  theta   =  0,            # (for static population) under-five mortality reduction
-  #theta   = 0.13,         # (for dynamic population) under-five mortality reduction due to MDA
+  #theta   =  0,            # (for static population) under-five mortality reduction
+  theta   = 0.13,         # (for dynamic population) under-five mortality reduction due to MDA
   #Baseline antibiotic use parameters------------------------------------------
   a.use = 0.06,            # Antibiotic use in % (~0.01–0.05:routine use,0.05 – 0.20: High use communitie,0.20 – 0.80 (short period) :MDA  )
   a.use.eff = 0.05 ,       # Antibiotic effect: 0.005−0.05 (assumed)
-  #--DDD/1000/day 
-  a.use_p =  25,           # ddd/1000/day  in general population in 2018 CrI: 25[23.1-26.9]
+  #---DDD/1000/day---------#
+  a.use_p =  23.1,         # ddd/1000/day  in general population in 2018 CrI: 25[23.1-26.9]
   a.use_c =  36.9,         # Antibiotic use in % in under five in 2018 CrI:36.9[31.9-42.4]
   d = 7,                   # Duration of antibiotics treatment in days  7[5-10]    
   #Country specif social contact patterns---------------------------------------
   m_contact = m_contact_1y_Tanzania, # Social contacts per day
   #Others parameters------------------------------------------------------------
-  kappa =    0,            # 0.05  #Proportion that develop/select resistance (Assumed),
-  amrd_rate =  0  # 27.3/(100000*365) #, #AMR related mortality per person per day,
-  #amrd_rate = (27.3/100000)/(0.15 * 0.9) # Sean:0.9(colonisation),0.15: Prevalence
+  kappa =    0,            # 0.05               #Proportion that develop/select resistance (Assumed),
+  #amrd_rate =  0           # 27.3/(100000/365), #AMR related mortality per person per day,
+ amrd_rate = (27.3/100000/365)/(0.15 * 0.9)   #Sean:0.9(colonization),: 0.15(Prevalence)
 )
 #MDA rate calculation: Exponential decay
 (parms.orig$r_mda<--log(1-parms.orig$mda_cov)/parms.orig$mda_duration)
@@ -461,7 +461,7 @@ tvec_10_b <- seq(0,  10*365.25 ,1)      #10 years No MDA, i will need a = 10
 state <- state.orig
 start <- Sys.time()
 #Baseline: Equilibrium at 70 years 
-tvec_0_b<- seq(0,    70*365.25 ,1) 
+tvec_0_b<- seq(0,    110*365.25 ,1) 
 parms_noMDA$mda_start_times <- numeric(0) #(mda_start_times<-(0:70)*365.25)
 start <- Sys.time()
 out_0_b_Tanzania <- bacteria.solve(tvec_0_b, state, parms_noMDA)
@@ -713,7 +713,7 @@ baseline_prevalence<-ggplot(df_with_resisitance_mortality, aes(x = time, y = pre
   )  +
   labs(
     title = "Baseline prevalence of E.Coli infections resistant to Azithromycin",
-    subtitle="Antibiotic use in Tanzania : 25 DDD per 1000 inhabitants per day",
+    subtitle="Antibiotic use in Tanzania : 23.1 DDD per 1000 inhabitants per day",
     x = "Time",
     y = "Resistance (%)"
   ) +
@@ -724,6 +724,7 @@ baseline_prevalence<-ggplot(df_with_resisitance_mortality, aes(x = time, y = pre
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
 print(baseline_prevalence)
+df_with_resisitance_mortality$prevalence
 
 pacman::p_load(tidyr,dplyr,ggplot2,scales)
 df_b <- df_no_resisitance_mortality %>%
@@ -944,6 +945,7 @@ plot_2<-ggplot(df_all_long, aes(x =Strategy, y = Resistance, color = Strategy)) 
   scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) +  # y-axis 0–100 with steps of 10
   facet_wrap(~Horizon, scales = "free_x",ncol = 4)
 
+print(plot_1)
 print(plot_2)
 pacman::p_load(gridExtra)
 grid.arrange(plot_1,plot_2,ncol=2)
