@@ -297,8 +297,9 @@ bacteria.odes <- function(t, state, parameters) {
     a.C_t <- bc * azt + tau
     #Mortality
     mort_eff <- mort
-    if (is_mda) mort_eff[0:4+1] <- mort[0:4+1] * (1 - theta)
+    #if (is_mda) mort_eff[0:4+1] <- mort[0:4+1] * (1 - theta)
     #if (use_mda=="TRUE") mort_eff[0:4+1] <- mort[0:4+1] * (1 - theta)
+    if (use_mda) {mort_eff[1:5] <- mort[1:5] * (1 - theta)}
     #...........................................................................
     #/tau<--log(1-parms.orig$a.use)      #a.use_1:daily rate of antibiotics use           :option A
     #//p_treated = parms.orig$a.use_p/1000 # parms.orig$a.use_p=ddd/1000/d                 :option B
