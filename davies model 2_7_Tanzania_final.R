@@ -221,12 +221,13 @@ mort <- popmort[, 5] # for dynamic population
 dim(m_contact_1y_Tanzania)
 colSums(ageing)
 #
-<<<<<<< HEAD
-for (i in 1:n_age) {
-  for (j in 1:n_age) {
-    m_contact_1y_Tanzania[i, j] <- m_contact_1y_Tanzania[i, j] / 25
-  }
-}
+# for (i in 1:n_age) {
+#  for (j in 1:n_age) {
+#    m_contact_1y_Tanzania[i, j] <- m_contact_1y_Tanzania[i, j] / 25
+#  }
+# }
+m_contact_1y_Tanzania <- m_contact_1y_Tanzania / 5
+
 colnames(m_contact_1y_Tanzania) <- c(as.character(0:99), "100+")
 rownames(m_contact_1y_Tanzania) <- c(as.character(0:99), "100+")
 m_contact_1y_Tanzania
@@ -234,22 +235,6 @@ m_contact_1y_Tanzania
 pacman::p_load(ggplot2, reshape2)
 # data frame
 # df <- melt(m_contact_1y_Tanzania )
-=======
-#for(i in 1:n_age){
-#  for(j in 1:n_age){
-#    m_contact_1y_Tanzania[i,j]<-m_contact_1y_Tanzania[i,j]/25
-#  }
-#}
-m_contact_1y_Tanzania <- m_contact_1y_Tanzania / 5
-
-colnames(m_contact_1y_Tanzania ) <-c(as.character(0:99), "100+")
-rownames(m_contact_1y_Tanzania ) <- c(as.character(0:99), "100+")
-m_contact_1y_Tanzania 
-#Visualization of my contact matrix
-pacman::p_load(ggplot2,reshape2)
-#data frame
-#df <- melt(m_contact_1y_Tanzania )
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 df <- reshape2::melt(m_contact_1y_Tanzania)
 colnames(df) <- c("Contactee", "Contactor", "Contacts")
 # Plot contact matrix
@@ -261,10 +246,9 @@ colnames(df) <- c("Contactee", "Contactor", "Contacts")
 )
 # Back into work environment
 setwd("C:/Disk F/4.Oxford Modelling for Global Health/Afox_Ubuntu/Afox Placement with Ben Cooper")
-<<<<<<< HEAD
-
 # Indices for compartments
-Xindex <- 1:n_age # Uninfected, untreated
+# Xindex <- (0*n_age+1):(1*n_age)       # Uninfected, untreated
+Xindex <- 1:(1 * n_age) # Uninfected, untreated
 Sindex <- (1 * n_age + 1):(2 * n_age) # drug-sensitive, untreated
 Rindex <- (2 * n_age + 1):(3 * n_age) # drug-resistant, untreated
 Srindex <- (3 * n_age + 1):(4 * n_age) # drug-sensitive, treated
@@ -272,42 +256,20 @@ Rsindex <- (4 * n_age + 1):(5 * n_age) # drug-resistant, treated
 Dindex <- (5 * n_age + 1):(6 * n_age) # Cummulative deaths
 CumIncRindex <- (6 * n_age + 1):(7 * n_age) # Cummulative resistance
 AMRDindex <- (7 * n_age + 1):(8 * n_age) # Cummulative resistance
-
 # MDA  intervention..............................................................
 # mda_start_times <- c(365, 79, 4380, 4745)
 (mda_start_times <- (0:50) * 365.25)
-=======
-# Indices for compartments 
-#Xindex <- (0*n_age+1):(1*n_age)       # Uninfected, untreated
-Xindex <- 1:(1*n_age)                  # Uninfected, untreated
-Sindex <- (1*n_age+1):(2*n_age)        # drug-sensitive, untreated
-Rindex <- (2*n_age+1):(3*n_age)        # drug-resistant, untreated
-Srindex <-(3*n_age+1):(4*n_age)        # drug-sensitive, treated
-Rsindex <-(4*n_age+1):(5*n_age)        # drug-resistant, treated
-Dindex <- (5*n_age+1):(6*n_age)           # Cummulative deaths
-CumIncRindex <-(6 * n_age + 1):(7 * n_age)# Cummulative resistance 
-AMRDindex <-(7 * n_age + 1):(8 * n_age)   # Cummulative resistance 
-#MDA  intervention..............................................................
-#mda_start_times <- c(365, 79, 4380, 4745)
-(mda_start_times<-(0:50)*365.25)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 (mda_duration <- 30)
 
-#mda_active <- function(time, mda_starts, duration) {
+# mda_active <- function(time, mda_starts, duration) {
 #  any(sapply(mda_starts, function(start) {
 #    time >= start && time < (start + duration)
 #  }))
-#}
+# }
 mda_active <- function(time, mda_starts, duration) {
   any(time >= mda_starts & time < (mda_starts + duration))
 }
-<<<<<<< HEAD
-
-
 # ODE system.....................................................................
-=======
-#ODE system.....................................................................
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 bacteria.odes <- function(t, state, parameters) {
   with(as.list(c(state, parameters)), {
     # Extract compartments
@@ -318,21 +280,23 @@ bacteria.odes <- function(t, state, parameters) {
     Rs <- state[Rsindex] # drug-resistant, treated
     D <- state[Dindex] # cumulative deaths
     CumIncR <- state[CumIncRindex] # cumulative resistances
-    AMRD <- state[AMRDindex]     # AMR related deaths
+    AMRD <- state[AMRDindex] # AMR related deaths
     # Total population
     N <- X + S + R + Sr + Rs
     #
     S.tot <- S + Sr # Susceptible co-colonised total
     R.tot <- R + Rs # Resistance co-colonised total
     #
-<<<<<<< HEAD
-    lamda.S <- beta.S * (m_contact_1y_Tanzania %*% (S.tot / N)) # Between host transmission
-    lamda.R <- beta.R * (m_contact_1y_Tanzania %*% (R.tot / N))
+    # lamda.S <- beta.S * (m_contact_1y_Tanzania %*% (S.tot/N)) #Between host transmission
+    # lamda.R <- beta.R * (m_contact_1y_Tanzania %*% (R.tot/N))
+    lamda.S <- beta.S * (m_contact %*% (S.tot / N))
+    lamda.R <- beta.R * (m_contact %*% (R.tot / N))
 
     # Intervention : MDA implementation..........................................
     # is_mda <- use_mda&&mda_active(t, mda_start_times, mda_duration)  # called ONCE
-    mda_starts <- parameters[["mda_start_times"]]
+    # mda_starts <- parameters[["mda_start_times"]]
     is_mda <- mda_active(t, mda_start_times, mda_duration) #
+
     # Option B
     # b    <- ifelse(is_mda, a + tau, tau)
     # a_t  <- b * azt
@@ -340,32 +304,16 @@ bacteria.odes <- function(t, state, parameters) {
     # a.C_t   <- bc * azt
     # Option C
     b <- ifelse(is_mda, a, 0)
-=======
-    #lamda.S <- beta.S * (m_contact_1y_Tanzania %*% (S.tot/N)) #Between host transmission
-    #lamda.R <- beta.R * (m_contact_1y_Tanzania %*% (R.tot/N))
-    lamda.S <- beta.S * (m_contact %*% (S.tot / N))
-    lamda.R <- beta.R * (m_contact %*% (R.tot / N))
-    
-    #Intervention : MDA implementation..........................................
-    #is_mda <- use_mda&&mda_active(t, mda_start_times, mda_duration)  # called ONCE
-    #mda_starts <- parameters[["mda_start_times"]]
-    is_mda <- mda_active(t, mda_start_times, mda_duration)  #
-    
-    #Option B
-    #b    <- ifelse(is_mda, a + tau, tau)
-    #a_t  <- b * azt
-    #bc      <- ifelse(is_mda, a.C + tau, tau)
-    #a.C_t   <- bc * azt
-    #Option C 
-    b <- ifelse(is_mda, a , 0)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
     a_t <- b * azt + tau
     bc <- ifelse(is_mda, a.C, 0)
     a.C_t <- bc * azt + tau
     # Mortality
     mort_eff <- mort
-<<<<<<< HEAD
-    if (is_mda) mort_eff[0:4 + 1] <- mort[0:4 + 1] * (1 - theta)
+    # if (is_mda) mort_eff[0:4+1] <- mort[0:4+1] * (1 - theta)
+    # if (use_mda=="TRUE") mort_eff[0:4+1] <- mort[0:4+1] * (1 - theta)
+    if (use_mda) {
+      mort_eff[1:5] <- mort[1:5] * (1 - theta)
+    }
     # ...........................................................................
     # /tau<--log(1-parms.orig$a.use)      #a.use_1:daily rate of antibiotics use           :option A
     # //p_treated = parms.orig$a.use_p/1000 # parms.orig$a.use_p=ddd/1000/d                 :option B
@@ -387,58 +335,21 @@ bacteria.odes <- function(t, state, parameters) {
 
     # Mortality reduction during MDA
     # //mort_eff <- mort  # start from baseline
-=======
-    #if (is_mda) mort_eff[0:4+1] <- mort[0:4+1] * (1 - theta)
-    #if (use_mda=="TRUE") mort_eff[0:4+1] <- mort[0:4+1] * (1 - theta)
-    if (use_mda) {mort_eff[1:5] <- mort[1:5] * (1 - theta)}
-    #...........................................................................
-    #/tau<--log(1-parms.orig$a.use)      #a.use_1:daily rate of antibiotics use           :option A
-    #//p_treated = parms.orig$a.use_p/1000 # parms.orig$a.use_p=ddd/1000/d                 :option B
-    #//tau<-p_treated/parms.orig$d         # daily antibiotic use rate using ddd/1000/day  :option B
-    
-    #Caluclation of a_t
-    #//b <- ifelse(mda_active(t, mda_start_times, mda_duration),a + (a.use.eff*tau), (a.use.eff*tau)) #:option A
-    #//b <- ifelse(mda_active(t, mda_start_times, mda_duration),a + tau, tau)                          #:option B
-    #//b <- ifelse(mda_active(t, mda_start_times, mda_duration), a, 0)                                #Option C: sean
-    #//a_t <- b * azt                                                                                  #:option A,b
-    #//a_t <- b * azt + tau                                                                           #option C: Sean
-    
-    #Caluclation of a.C_t
-    #//bc <- ifelse(mda_active(t, mda_start_times, mda_duration),a.C + (a.use.eff*tau), (a.use.eff*tau))#:option A
-    #//bc <- ifelse(mda_active(t, mda_start_times, mda_duration),a.C + tau, tau)                         #:option B
-    #//bc <- ifelse(mda_active(t, mda_start_times, mda_duration), a.C, 0)                               #:option c
-    #//a.C_t <- bc * azt                                                                                 #:option A,B      
-    #//a.C_t <- bc * azt + tau :                                                                        #Option C
-    
-    #Mortality reduction during MDA
-    #//mort_eff <- mort  # start from baseline 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
     # Pulse for MDA period
     # //if (mda_active(t, mda_start_times, mda_duration)) {
     # // mort_eff[mda_targeted_ages] <- mort[mda_targeted_ages] * (1 - theta)
     # //}
     # ...........................................................................
     # Births
-<<<<<<< HEAD
     births <- rep(0, n_age)
-    # births[1] <- sum(popbirth[,5] * N)       #for dynamic population
-    total_deaths <- sum(mort_eff * N) # for static population
+    births[1] <- sum(popbirth[, 5] * N) # for dynamic population
+    # total_deaths <- sum(mort_eff * N  )  #for static population
+    total_deaths <- sum(mort_eff * N + amrd_rate * (R + Rs)) # for static population
     births[1] <- total_deaths # for static population
     # Browser()
     # ...........................................................................
     # ODEs system # Here i added a_t
     dX <- births + (u.S + a_t) * S + u.R * R + u.C * (Sr + Rs) - (lamda.S + lamda.R) * X + ageing %*% X - mort_eff * X #
-=======
-    births <- rep(0, n_age)            
-    births[1] <- sum(popbirth[,5] * N)   #for dynamic population
-    #total_deaths <- sum(mort_eff * N  )  #for static population 
-    total_deaths <- sum(mort_eff * N + amrd_rate * (R + Rs))  #for static population 
-    births[1] <- total_deaths                                  #for static population
-    #Browser()
-    #...........................................................................
-    #ODEs system # Here i added a_t
-    dX <- births + (u.S + a_t) * S + u.R * R + u.C * (Sr + Rs) - ( lamda.S + lamda.R ) * X +  ageing %*% X - mort_eff * X   #
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
     #
     dS <- lamda.S * X - u.S * S - k * lamda.R * S - a_t * S + ageing %*% S - mort_eff * S #
     #
@@ -446,7 +357,6 @@ bacteria.odes <- function(t, state, parameters) {
     #
     dSr <- k * lamda.R * S - Sr * u.C - a.C_t * Sr + ageing %*% Sr - mort_eff * Sr #
     #
-<<<<<<< HEAD
     dRs <- k * lamda.S * R - Rs * u.C - a.C_t * Rs + ageing %*% Rs - (mort_eff + amrd_rate) * Rs #
 
     # Counting
@@ -455,16 +365,6 @@ bacteria.odes <- function(t, state, parameters) {
     dAMRD <- amrd_rate * (R + Rs) # Cummulative : Mortality attributable to AMR
     # dCumRs <- k*lamba.S*R                      # Cummulative
     list(c(dX, dS, dR, dSr, dRs, dD, dCumIncR, dAMRD))
-=======
-    dRs <- k * lamda.S * R - Rs * u.C - a.C_t * Rs  + ageing %*% Rs - (mort_eff + amrd_rate) * Rs                                         #
-    
-    #Counting 
-    dD<- mort_eff * X + mort_eff * S + mort_eff * R + mort_eff * Sr + mort_eff * Rs + amrd_rate * (R + Rs)   #Cummulative                    #
-    dCumIncR <- lamda.R * X + k * lamda.R * S   # Cummulative incidence of New resistant infections :a.Uninfected person get resistant strains # 
-    dAMRD <- amrd_rate * (R + Rs)               # Cummulative : Mortality attributable to AMR
-    #dCumRs <- k*lamba.S*R                      # Cummulative
-    list(c(dX, dS, dR, dSr, dRs,dD,dCumIncR,dAMRD))
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   })
 }
 
@@ -475,76 +375,42 @@ bacteria.solve <- function(t, state, parameters) {
 }
 # Parameters---------------------------------------------------------------------
 parms.orig <- list(
-<<<<<<< HEAD
-  # Pathogen parameters..........................................................
-  beta.S = 5, # Transmission of sensitive         : (β = 5 month−1)
-  u.S = 1, # Clearance sensitive (natural)     : (u = 1 month−1)
-  u.R = 1, # Clearance resistant (natural)     : (u = 1 month−1) :lower than susceptible?
-  u.C = 1, # Clearance co-colonised (natural)  : (u = 1 month−1)
+  # Pathogen parameters..........................................................#Recommended,Range
+  beta.S = 0.03, # 5,       # Transmission of sensitive   : (β = 5 month−1)    :[0.04-0.08][0.03-0.10
+  u.S = 1, # Clearance sensitive (natural):(u = 1 month−1)          :[0.01-0.05]
+  u.R = 1, # Clearance resistant (natural)     : (u = 1 month−1)    :[0.008-0.02] lower than susceptible?
+  u.C = 1, # Clearance co-colonised (natural)  : (u = 1 month−1)    :[0.01-0.04]
   k = 0.5, # The efficiency of co-colonisation : (k = 0.25,0.5,1.0)
   c = 0.20, # The fitness cost : (c = 0-10%)
   # MDA Azithromycin parameters..................................................
-  a = 0.16, # Clearance sensitive (drug-induced)
-  a.C = 0.16, # Clearance co-colonised (drug-induced)
+  a = 0.16, # Clearance sensitive (drug-induced)                     :[0.05-0.10]
+  a.C = 0.16, # Clearance co-colonised (drug-induced)                  :[0.03-0.08]
   mda_cycle = 365, # MDA frequency
   mda_duration = 30, # MDA duration
   mda_cov = 0.6, # MDA coverage
-  # theta   =  0,            # (for static population) under-five mortality reduction
+  # theta   =  0,           # (for static population) under-five mortality reduction
   theta = 0.13, # (for dynamic population) under-five mortality reduction due to MDA
   # Baseline antibiotic use parameters------------------------------------------
   a.use = 0.06, # Antibiotic use in % (~0.01–0.05:routine use,0.05 – 0.20: High use communitie,0.20 – 0.80 (short period) :MDA  )
   a.use.eff = 0.05, # Antibiotic effect: 0.005−0.05 (assumed)
-=======
-  #Pathogen parameters..........................................................#Recommended,Range
-  beta.S = 0.03,#5,       # Transmission of sensitive   : (β = 5 month−1)    :[0.04-0.08][0.03-0.10 
-  u.S = 1,          # Clearance sensitive (natural):(u = 1 month−1)          :[0.01-0.05]  
-  u.R = 1,          # Clearance resistant (natural)     : (u = 1 month−1)    :[0.008-0.02] lower than susceptible?
-  u.C = 1,          # Clearance co-colonised (natural)  : (u = 1 month−1)    :[0.01-0.04]
-  k =  0.5,                # The efficiency of co-colonisation : (k = 0.25,0.5,1.0)
-  c =  0.20,               # The fitness cost : (c = 0-10%)
-  #MDA Azithromycin parameters..................................................
-  a = 0.16,        # Clearance sensitive (drug-induced)                     :[0.05-0.10] 
-  a.C = 0.16,        # Clearance co-colonised (drug-induced)                  :[0.03-0.08] 
-  mda_cycle = 365,         # MDA frequency
-  mda_duration = 30,       # MDA duration
-  mda_cov =  0.6,          # MDA coverage
-  #theta   =  0,           # (for static population) under-five mortality reduction
-  theta   = 0.13,          # (for dynamic population) under-five mortality reduction due to MDA
-  #Baseline antibiotic use parameters------------------------------------------
-  a.use = 0.06,            # Antibiotic use in % (~0.01–0.05:routine use,0.05 – 0.20: High use communitie,0.20 – 0.80 (short period) :MDA  )
-  a.use.eff = 0.05,        # Antibiotic effect: 0.005−0.05 (assumed)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   #---DDD/1000/day---------#
   a.use_p = 23.1, # ddd/1000/day  in general population in 2018 CrI: 25[23.1-26.9]
   a.use_c = 36.9, # Antibiotic use in % in under five in 2018 CrI:36.9[31.9-42.4]
   d = 7, # Duration of antibiotics treatment in days  7[5-10]
   # Country specif social contact patterns---------------------------------------
   m_contact = m_contact_1y_Tanzania, # Social contacts per day
-<<<<<<< HEAD
   # Others parameters------------------------------------------------------------
-  kappa = 0, # 0.05               #Proportion that develop/select resistance (Assumed),
+  kappa = 0, # 0.05                #Proportion that develop/select resistance (Assumed),
   # amrd_rate =  0           # 27.3/(100000/365), #AMR related mortality per person per day,
   amrd_rate = (27.3 / 100000 / 365) / (0.15 * 0.9) # Sean:0.9(colonization),: 0.15(Prevalence)
-=======
-  #Others parameters------------------------------------------------------------
-  kappa =    0,            # 0.05                #Proportion that develop/select resistance (Assumed),
-  #amrd_rate =  0           # 27.3/(100000/365), #AMR related mortality per person per day,
-  amrd_rate = (27.3/100000/365)/(0.15 * 0.9)     #Sean:0.9(colonization),: 0.15(Prevalence)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 )
 # MDA rate calculation: Exponential decay
 (parms.orig$r_mda <- -log(1 - parms.orig$mda_cov) / parms.orig$mda_duration)
 parms.orig
 parms.orig[1:4]
-<<<<<<< HEAD
 # Convert daily
 # [1:5]
-parms.orig[1:4] <- lapply(parms.orig[1:4], function(x) x * 12 / 365.25) # Daily
-=======
-#Convert daily
-#[1:5]
-parms.orig[2:4] <- lapply(parms.orig[2:4], function(x) x*12/365.25) # Daily
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+parms.orig[2:4] <- lapply(parms.orig[2:4], function(x) x * 12 / 365.25) # Daily
 parms.orig[1:4]
 # Adjusted clearance rates: Esther et al
 # parms.orig["u.S"]= 0.0098
@@ -568,12 +434,8 @@ azt[mda_targeted_ages] <- mda_cov # 0.8 #MDA coverage
 parms.orig$tau <- tau
 parms.orig$azt <- azt
 parms.orig$use_mda <- TRUE
-<<<<<<< HEAD
+parms.orig$mda_start_times <- mda_start_times #
 parms <- parms.orig
-=======
-parms.orig$mda_start_times <- mda_start_times   # 
-parms <- parms.orig 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 parms
 # ~~~~~~~~~No-annual MDA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~>
 parms_noMDA <- parms # No annual MDA  parameters
@@ -587,15 +449,8 @@ parms_noMDA
 # parms_noMDA<-parms.orig
 
 # Inside bacteria.odes:
-<<<<<<< HEAD
 # is_mda <- use_mda && mda_active(t, mda_start_times, mda_duration)
-
 # Initial conditions------------------------------------------------------------
-
-=======
-#is_mda <- use_mda && mda_active(t, mda_start_times, mda_duration)
-#Initial conditions------------------------------------------------------------
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 names(Tanzania_pop_in_thousands)
 head(Tanzania_pop_in_thousands)
 dim(Tanzania_pop_in_thousands)
@@ -641,23 +496,13 @@ state <- as.numeric(out_0_b_Tanzania[nrow(out_0_b_Tanzania), -1])
 # Modelling different scenarios
 parms
 parms_noMDA
-<<<<<<< HEAD
-# Simulations--------------------------------------------------------------------
+# Simulations#--------------------------------------------------------------------
 start <- Sys.time()
 # ~~~~~~~~~No MDA and annual MDA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 (parms$mda_start_times <- (0:1) * 365.25) # 1 year MDA
 out_1_a_Tanzania <- bacteria.solve(tvec_1_a, state, parms) # Annual
 parms_noMDA$mda_start_times <- numeric(0) # (mda_start_times<-(0:1)*365.25) # 1 year No MDA
 out_1_b_Tanzania <- bacteria.solve(tvec_1_b, state, parms_noMDA) # No annual
-=======
-#Simulations#--------------------------------------------------------------------
-start<-Sys.time()
-#~~~~~~~~~No MDA and annual MDA~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-(parms$mda_start_times<-(0:1)*365.25) # 1 year MDA 
-out_1_a_Tanzania <- bacteria.solve(tvec_1_a, state, parms)# Annual 
-parms_noMDA$mda_start_times <- numeric(0) #(mda_start_times<-(0:1)*365.25) # 1 year No MDA 
-out_1_b_Tanzania <- bacteria.solve(tvec_1_b, state, parms_noMDA) # No annual 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 #
 (parms$mda_start_times <- (0:50) * 365.25) # MDA
 out_5_a_Tanzania <- bacteria.solve(tvec_5_a, state, parms)
@@ -780,66 +625,65 @@ names(results_50_a_Tanzania)
 names(results_50_b_Tanzania)
 names(results_50_c_Tanzania)
 
-<<<<<<< HEAD
-# 6.Verification of the population over time
-# Total population at each time point
-=======
-#Baseline mortality
-popmort <- as.data.frame(mortality %>% 
-    filter(Country == "United Republic of Tanzania") %>%
-    filter(Year == 2023))
+# Baseline mortality
+popmort <- as.data.frame(mortality %>%
+  filter(Country == "United Republic of Tanzania") %>%
+  filter(Year == 2023))
 pyramyd_mort <- ggplot(popmort, aes(x = Age, y = Percentage)) +
   geom_col(fill = "red") +
-  #scale_x_continuous(
-  #limits = c(0, 100),
+  # scale_x_continuous(
+  # limits = c(0, 100),
   # breaks = seq(0, 100, by = 10))+
-  labs(title = "Mortality in Tanzania (2023)",
-    x = "Age", y = "Deaths per 1000 pop") +
+  labs(
+    title = "Mortality in Tanzania (2023)",
+    x = "Age", y = "Deaths per 1000 pop"
+  ) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 #
 print(pyramyd_mort)
-#age groups : No MDA
+# age groups : No MDA
 deaths_1_b <- (results_1_b_Tanzania[, Dindex + 1])
 colnames(deaths_1_b) <- c(as.character(0:99), "100+")
 deaths_1_b_last <- as.numeric(tail(deaths_1_b, 1))
-deaths_1_b_prop <- round(deaths_1_b_last, 0)*1000 / sum(round(deaths_1_b_last, 0))
-barplot(deaths_1_b_prop,col="blue")
+deaths_1_b_prop <- round(deaths_1_b_last, 0) * 1000 / sum(round(deaths_1_b_last, 0))
+barplot(deaths_1_b_prop, col = "blue")
 
 # age groups :MDA
 deaths_1_a_interv <- (results_1_a_Tanzania[, Dindex + 1])
 colnames(deaths_1_a_interv) <- c(as.character(0:99), "100+")
 deaths_1_a_last <- as.numeric(tail(deaths_1_a_interv, 1))
-deaths_prop_1_a_interv <- round(deaths_1_a_last, 0)*1000 /  sum(round(deaths_1_a_last, 0))
-barplot(deaths_prop_1_a_interv,col="green")
+deaths_prop_1_a_interv <- round(deaths_1_a_last, 0) * 1000 / sum(round(deaths_1_a_last, 0))
+barplot(deaths_prop_1_a_interv, col = "green")
 
-death_data <- data.frame("Age" = 0:100, "NoMDA"=as.vector(round(deaths_1_b_last, 0)), "MDA" = as.vector(round(deaths_1_a_last, 0)))
-#death_data <- data.frame("Age" = 0:100, "Baseline"=as.vector(round(deaths_1_b_prop, 0)), "MDA" = as.vector(round(deaths_prop_1_a_interv, 0)))
+death_data <- data.frame("Age" = 0:100, "NoMDA" = as.vector(round(deaths_1_b_last, 0)), "MDA" = as.vector(round(deaths_1_a_last, 0)))
+# death_data <- data.frame("Age" = 0:100, "Baseline"=as.vector(round(deaths_1_b_prop, 0)), "MDA" = as.vector(round(deaths_prop_1_a_interv, 0)))
 library(reshape2)
 df_long <- melt(death_data, id.var = "Age")
 library(ggplot2)
-ggplot(df_long, aes(x = Age, y = value, fill = variable)) + geom_bar(stat = "identity", position = "dodge") 
+ggplot(df_long, aes(x = Age, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge")
 
 #
 deaths_1_c_interv <- (results_1_c_Tanzania[, Dindex + 1])
 colnames(deaths_1_c_interv) <- c(as.character(0:99), "100+")
 deaths_1_c_last <- as.numeric(tail(deaths_1_c_interv, 1))
-deaths_prop_1_c_interv <- round(deaths_1_a_last, 0)*1000 /  sum(round(deaths_1_c_last, 0))
-barplot(deaths_prop_1_c_interv,col="purple")
+deaths_prop_1_c_interv <- round(deaths_1_a_last, 0) * 1000 / sum(round(deaths_1_c_last, 0))
+barplot(deaths_prop_1_c_interv, col = "purple")
 #
-#death_data <- data.frame("Age" = 0:100, "NoMDA"=as.vector(round(deaths_1_b_last, 0)), "MDA" = as.vector(round(deaths_1_a_last, 0)),"BiMDA" = as.vector(round(deaths_1_c_last, 0)))
-death_data <- data.frame("Age" = 0:100, "Baseline"=as.vector(round(popmort[,5], 0)), "MDA" = as.vector(round(deaths_prop_1_a_interv, 0)),"BiMDA" = as.vector(round(deaths_prop_1_c_interv, 0)))
+# death_data <- data.frame("Age" = 0:100, "NoMDA"=as.vector(round(deaths_1_b_last, 0)), "MDA" = as.vector(round(deaths_1_a_last, 0)),"BiMDA" = as.vector(round(deaths_1_c_last, 0)))
+death_data <- data.frame("Age" = 0:100, "Baseline" = as.vector(round(popmort[, 5], 0)), "MDA" = as.vector(round(deaths_prop_1_a_interv, 0)), "BiMDA" = as.vector(round(deaths_prop_1_c_interv, 0)))
 library(reshape2)
-head(death_data )
+head(death_data)
 df_long <- melt(death_data, id.var = "Age")
-colnames(df_long)[2:3]<-c("Scenario","Mortality")
+colnames(df_long)[2:3] <- c("Scenario", "Mortality")
 head(df_long)
 library(ggplot2)
-ggplot(df_long|>
-    filter(Age<15), aes(x = Age, y = Mortality, fill = Scenario)) + 
-      geom_bar(stat = "identity", position = "dodge") +
-  #scale_y_continuous(labels = scales::label_number(scale = 1e-6, accuracy = 0.1, suffix = " M")) +
-  labs(y="Deaths per 1000 population")
+ggplot(df_long |>
+  filter(Age < 15), aes(x = Age, y = Mortality, fill = Scenario)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  # scale_y_continuous(labels = scales::label_number(scale = 1e-6, accuracy = 0.1, suffix = " M")) +
+  labs(y = "Deaths per 1000 population")
 #
 library(dplyr)
 library(ggplot2)
@@ -850,8 +694,10 @@ df_plot <- df_long |>
     Age_group = factor(Age_group, levels = c(as.character(0:100), "101+"))
   )
 
-ggplot(df_plot |> filter(Age < 101 | Age >= 101),
-  aes(x = Age_group, y = Mortality, fill = Scenario)) + 
+ggplot(
+  df_plot |> filter(Age < 101 | Age >= 101),
+  aes(x = Age_group, y = Mortality, fill = Scenario)
+) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(x = "Age", y = "Deaths per 1000 population") +
   theme_classic(base_size = 13) +
@@ -859,9 +705,8 @@ ggplot(df_plot |> filter(Age < 101 | Age >= 101),
     axis.text.x = element_text(angle = 90, vjust = 0.5)
   )
 
-#6.Verification of the population over time
-#Total population at each time point
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+# 6.Verification of the population over time
+# Total population at each time point
 names(results_1_b_Tanzania)
 dim(results_1_b_Tanzania)
 str(results_1_b_Tanzania)
@@ -954,26 +799,16 @@ Tanzania_df_with_resisitance_mortality <- data.frame(
   prevalence,
   mortality
 )
-<<<<<<< HEAD
-head(df_with_resisitance_mortality)
-baseline_prevalence <- ggplot(df_with_resisitance_mortality, aes(x = time, y = prevalence)) +
-=======
 head(Tanzania_df_with_resisitance_mortality)
-baseline_prevalence<-ggplot(Tanzania_df_with_resisitance_mortality, aes(x = time, y = prevalence)) +
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+baseline_prevalence <- ggplot(Tanzania_df_with_resisitance_mortality, aes(x = time, y = prevalence)) +
   geom_line(linewidth = 0.5) +
   scale_y_continuous(
     limits = c(0, 100),
     breaks = seq(0, 100, by = 10)
   ) +
   scale_x_continuous(
-<<<<<<< HEAD
-    breaks = seq(min(df_with_resisitance_mortality$time), max(df_with_resisitance_mortality$time), by = 3650)
-  ) +
-=======
     breaks = seq(min(Tanzania_df_with_resisitance_mortality$time), max(Tanzania_df_with_resisitance_mortality$time), by = 3650)
-  )  +
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+  ) +
   labs(
     title = "Baseline prevalence of E.Coli infections resistant to Azithromycin",
     subtitle = "Antibiotic use in Tanzania : 23.1 DDD per 1000 inhabitants per day",
@@ -989,13 +824,8 @@ baseline_prevalence<-ggplot(Tanzania_df_with_resisitance_mortality, aes(x = time
 print(baseline_prevalence)
 Tanzania_df_with_resisitance_mortality$prevalence
 
-<<<<<<< HEAD
 pacman::p_load(tidyr, dplyr, ggplot2, scales)
-df_b <- df_no_resisitance_mortality %>%
-=======
-pacman::p_load(tidyr,dplyr,ggplot2,scales)
 df_b <- Tanzania_df_no_resisitance_mortality %>%
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   pivot_longer(
     cols = -time,
     names_to = "Compartment",
@@ -1148,25 +978,14 @@ Tanzania_df_all_long <- df_all %>%
     names_to = "Strategy",
     values_to = "Resistance"
   )
-<<<<<<< HEAD
-head(df_all_long)
-df_all_long <- df_all_long |>
-  mutate(Horizon = paste0(Years, "Y"))
-head(df_all_long)
-summary(df_all_long$Resistance)
-
-df_all_long <- df_all_long %>%
-  mutate(Horizon = factor(Horizon, levels = c("1Y", "5Y", "10Y", "20Y")))
-=======
 head(Tanzania_df_all_long)
-Tanzania_df_all_long<-Tanzania_df_all_long|>
-  mutate(Horizon=paste0(Years,"Y"))
+Tanzania_df_all_long <- Tanzania_df_all_long |>
+  mutate(Horizon = paste0(Years, "Y"))
 head(Tanzania_df_all_long)
 summary(Tanzania_df_all_long$Resistance)
 
 Tanzania_df_all_long <- Tanzania_df_all_long %>%
-  mutate(Horizon = factor(Horizon, levels = c("1Y", "5Y", "10Y", "20Y"))) 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+  mutate(Horizon = factor(Horizon, levels = c("1Y", "5Y", "10Y", "20Y")))
 
 Tanzania_df_all_long$Resistance[2]
 head(Tanzania_df_all_long)
@@ -1174,21 +993,12 @@ baseline_value <- Tanzania_df_all_long %>%
   filter(Strategy == "No-MDA") %>%
   slice(1) %>%
   pull(Resistance)
-<<<<<<< HEAD
-colnames(df_all_long)[3] <- "Policy"
+colnames(Tanzania_df_all_long)[3] <- "Policy"
 
-plot_1 <- ggplot(df_all_long |>
+plot_1 <- ggplot(Tanzania_df_all_long |>
   filter(Horizon != "20Y"), aes(x = Days, y = Resistance, color = Policy)) +
   # geom_point(size=0.5)+
   geom_line(linewidth = 0.8, alpha = 0.9) +
-=======
-colnames(Tanzania_df_all_long)[3]<-"Policy"
-
-plot_1<-ggplot(Tanzania_df_all_long|>
-    filter(Horizon != "20Y"), aes(x = Days, y = Resistance, color = Policy)) +
-  #geom_point(size=0.5)+
-  geom_line(linewidth = 0.8, alpha = 0.9)+
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   geom_hline(
     yintercept = Tanzania_df_all_long$Resistance[2],
     color      = "gray60",
@@ -1200,14 +1010,9 @@ plot_1<-ggplot(Tanzania_df_all_long|>
     labels = seq(0, 50) #
   ) +
   scale_y_continuous(
-<<<<<<< HEAD
-    limits = c(10, 40),
-    breaks = seq(10, 40, by = 1), labels = seq(10, 40, by = 1)
-  ) +
-=======
     limits = c(10, 35),
-    breaks = seq(10, 35, by = 10), labels = seq(10, 35, by = 10))+
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+    breaks = seq(10, 35, by = 10), labels = seq(10, 35, by = 10)
+  ) +
   scale_color_manual(values = c(
     "No-MDA" = "black",
     "MDA" = "#1f77b4", # deep blue
@@ -1225,37 +1030,21 @@ plot_1<-ggplot(Tanzania_df_all_long|>
   )
 
 print(plot_1)
-<<<<<<< HEAD
-colnames(df_all_long)[3] <- "Strategy"
-df_all_long$Resistance[2]
-df_all_long_1 <- df_all_long %>%
+colnames(Tanzania_df_all_long)[3] <- "Strategy"
+Tanzania_df_all_long$Resistance[2]
+Tanzania_df_all_long_1 <- Tanzania_df_all_long %>%
   filter(Strategy != "No-MDA")
-print(df_all_long_1)
-plot_2 <- ggplot(df_all_long, aes(x = Strategy, y = Resistance, color = Strategy)) +
+print(Tanzania_df_all_long_1)
+plot_2 <- ggplot(Tanzania_df_all_long, aes(x = Strategy, y = Resistance, color = Strategy)) +
   geom_boxplot(color = "black", fill = "skyblue") +
   geom_hline(
-    yintercept = df_all_long$Resistance[2], # horizontal line at 15%
+    yintercept = Tanzania_df_all_long$Resistance[2], # horizontal line at 15%
     color = "red",
     linetype = "dashed",
     linewidth = 1
   ) +
   scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) + # y-axis 0–100 with steps of 10
   facet_wrap(~Horizon, scales = "free_x", ncol = 4)
-=======
-colnames(Tanzania_df_all_long)[3]<-"Strategy"
-Tanzania_df_all_long$Resistance[2]
-Tanzania_df_all_long_1<-Tanzania_df_all_long %>%
-  filter(Strategy != "No-MDA")
-print(Tanzania_df_all_long_1)
-plot_2<-ggplot(Tanzania_df_all_long, aes(x =Strategy, y = Resistance, color = Strategy)) +
-  geom_boxplot(color="black",fill="skyblue") +
-  geom_hline(yintercept = Tanzania_df_all_long$Resistance[2],               # horizontal line at 15%
-    color = "red", 
-    linetype = "dashed", 
-    linewidth = 1) +
-  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) +  # y-axis 0–100 with steps of 10
-  facet_wrap(~Horizon, scales = "free_x",ncol = 4)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 
 print(plot_1)
 print(plot_2)
@@ -1268,27 +1057,15 @@ pacman::p_load(tidyplots, pak)
 #
 Tanzania_df_all_long <- Tanzania_df_all_long %>%
   mutate(Horizon = paste0(Years, "Y"))
-<<<<<<< HEAD
-colnames(df_all_long)[3] <- "Strategy"
-df_all_long <- df_all_long %>%
+colnames(Tanzania_df_all_long)[3] <- "Strategy"
+Tanzania_df_all_long <- Tanzania_df_all_long %>%
   mutate(Horizon = factor(Horizon, levels = c("1Y", "5Y", "10Y", "20Y")))
-df_all_long
-comp_1 <- df_all_long |>
+Tanzania_df_all_long
+comp_1 <- Tanzania_df_all_long |>
   tidyplot(x = Strategy, y = Resistance, color = Strategy) |>
   adjust_size(width = 55, height = 48) |>
   add_boxplot() |> #
   add_test_pvalue(ref.group = 1) |>
-=======
-colnames(Tanzania_df_all_long)[3]<-"Strategy"
-Tanzania_df_all_long <- Tanzania_df_all_long %>%
-  mutate(Horizon = factor(Horizon, levels = c("1Y", "5Y", "10Y", "20Y")))
-Tanzania_df_all_long
-comp_1<-Tanzania_df_all_long |> 
-  tidyplot(x = Strategy, y = Resistance, color = Strategy) |> 
-  adjust_size(width = 55, height = 48) |> 
-  add_boxplot() |>                # 
-  add_test_pvalue(ref.group = 1) |> 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   split_plot(by = Horizon)
 print(comp_1)
 
@@ -1300,11 +1077,7 @@ comp_1_1 <- Tanzania_df_all_long |>
   add_test_pvalue(ref.group = 1) |>
   split_plot(by = Horizon)
 print(comp_1_1)
-<<<<<<< HEAD
-comp_1_1 <- df_all_long |>
-=======
-comp_1_1<-Tanzania_df_all_long |>
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+comp_1_1 <- Tanzania_df_all_long |>
   filter(Horizon != "20Y") |>
   tidyplot(x = Days, y = Resistance, color = Strategy) |>
   add_mean_line() |>
@@ -1312,23 +1085,13 @@ comp_1_1<-Tanzania_df_all_long |>
   split_plot(by = Horizon)
 print(comp_1_1)
 
-<<<<<<< HEAD
-head(df_all_long)
-df_all_long_1 <- df_all_long |>
-  filter(Horizon != "20Y")
-
-plot_5 <- split_plot(
-  df_all_long |>
-    tidyplot(x = Days, y = Resistance, color = Strategy) |>
-=======
 head(Tanzania_df_all_long)
-Tanzania_df_all_long_1<-Tanzania_df_all_long|>
-  filter(Horizon !="20Y")
+Tanzania_df_all_long_1 <- Tanzania_df_all_long |>
+  filter(Horizon != "20Y")
 #
-plot_5<-split_plot(
-  Tanzania_df_all_long |> 
-    tidyplot(x = Days, y = Resistance, color = Strategy) |> 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+plot_5 <- split_plot(
+  Tanzania_df_all_long |>
+    tidyplot(x = Days, y = Resistance, color = Strategy) |>
     add_areastack_absolute(),
   by = Horizon
 )
@@ -1336,17 +1099,10 @@ print(plot_5)
 head(Tanzania_df_all_long)
 table(Tanzania_df_all_long$Years)
 
-<<<<<<< HEAD
-df_all_long |>
+Tanzania_df_all_long |>
   dplyr::filter(Years %in% c(1, 5, 10, 20)) |>
   tidyplot(y = Resistance, color = Strategy) |>
   add_donut() |>
-=======
-Tanzania_df_all_long |> 
-  dplyr::filter(Years %in% c(1, 5, 10, 20)) |> 
-  tidyplot(y = Resistance, color = Strategy) |> 
-  add_donut() |> 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   adjust_size(width = 25, height = 25) |>
   split_plot(by = Years)
 ggsave(
@@ -1434,25 +1190,15 @@ df_c_all_long_1 <- df_c_all_long %>%
   filter(Scenario != "Baseline")
 plot_4 <- ggplot(df_c_all_long_1, aes(x = Scenario, y = Colonisation, color = Scenario)) +
   geom_point(size = 1) +
-<<<<<<< HEAD
   # geom_boxplot(color="black",fill="skyblue") +
   geom_hline(
-    yintercept = df_all_long$Resistance[2], # horizontal line at 15%
+    yintercept = Tanzania_df_all_long$Resistance[2], # horizontal line at 15%
     color = "red",
     linetype = "dashed",
     linewidth = 1
   ) +
   scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) + # y-axis 0–100 with steps of 10
   facet_wrap(~Years, scales = "free_x", ncol = 4)
-=======
-  #geom_boxplot(color="black",fill="skyblue") +
-  geom_hline(yintercept = Tanzania_df_all_long$Resistance[2],               # horizontal line at 15%
-    color = "red", 
-    linetype = "dashed", 
-    linewidth = 1) +
-  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10)) +  # y-axis 0–100 with steps of 10
-  facet_wrap(~Years, scales = "free_x",ncol = 4)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 print(plot_4)
 #
 print(plot_3)
@@ -1567,19 +1313,11 @@ df_incidence_5 <- data.frame(Years = 5, Days = seq_along(incidence_5_a) - 1, Onc
 df_incidence_10 <- data.frame(Years = 10, Days = seq_along(incidence_10_a) - 1, Once = incidence_10_a, Baseline = incidence_10_b, Twice = incidence_10_c)
 df_incidence_50 <- data.frame(Years = 50, Days = seq_along(incidence_50_a) - 1, Once = incidence_50_a, Baseline = incidence_50_b, Twice = incidence_50_c)
 
-<<<<<<< HEAD
 # Combine all
-df_incidence_all <- rbind(df_incidence_1, df_incidence_5, df_incidence_10, df_incidence_50)
-head(df_incidence_all)
-colnames(df_incidence_all)[3:5] <- c("MDA", "No-MDA", "Bi-MDA")
-head(df_incidence_all)
-=======
-#Combine all
 Tanzania_df_incidence_all <- rbind(df_incidence_1, df_incidence_5, df_incidence_10, df_incidence_50)
 head(Tanzania_df_incidence_all)
-colnames(Tanzania_df_incidence_all)[3:5]<-c("MDA","No-MDA","Bi-MDA")
+colnames(Tanzania_df_incidence_all)[3:5] <- c("MDA", "No-MDA", "Bi-MDA")
 head(Tanzania_df_incidence_all)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 library(tidyr)
 # Long format
 Tanzania_df_incidence_all_long <- Tanzania_df_incidence_all %>%
@@ -1801,17 +1539,10 @@ ggsave(
   units = "in",
   dpi = 300
 )
-<<<<<<< HEAD
-#
-# Y_1_5_10 <- patchwork::wrap_plots(plot_10_b, plot_10_a, plot_10_c, ncol = 3) +
-=======
 
-#Y_1_5_10 <- patchwork::wrap_plots(plot_10_b, plot_10_a, plot_10_c, ncol = 3) +
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+# Y_1_5_10 <- patchwork::wrap_plots(plot_10_b, plot_10_a, plot_10_c, ncol = 3) +
 #  patchwork::plot_annotation(tag_levels = "A")
 # Y_1_5_10
-
-<<<<<<< HEAD
 
 # Resistance : R_total<-R_total+Rs_total
 
@@ -1824,9 +1555,6 @@ ggsave(
 # //a_10_a<-tail(cumsum(rowSums(out_10_a_Tanzania[, c(Rindex,Rsindex) + 1])), 1)
 # //a_10_b<-tail(cumsum(rowSums(out_10_b_Tanzania[, c(Rindex,Rsindex) + 1])), 1)
 # //a_10_c<-tail(cumsum(rowSums(out_10_c_Tanzania[, c(Rindex,Rsindex) + 1])), 1)
-=======
-#Resistance : R_total<-R_total+Rs_total
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 
 # Burden and  change in resistance
 # I.1 Years
@@ -1904,18 +1632,12 @@ print(totalresistance)
 
 # Visualization
 library(ggplot2)
-<<<<<<< HEAD
+head(totalresistance)
 p1 <- ggplot(
-  totalresistance,
+  totalresistance |>
+    filter(Strategy != "No-MDA"),
   aes(x = Horizon, y = R_final, fill = Strategy)
 ) +
-=======
-head(totalresistance)
-p1 <- ggplot(totalresistance|>
-    filter(Strategy!="No-MDA"),
-  aes(x = Horizon, y = R_final, fill = Strategy)) +
-  
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   geom_col(position = position_dodge(width = 0.7), width = 0.6) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey40") +
   scale_fill_manual(values = c(
@@ -2058,13 +1780,8 @@ p1
 p2
 p3
 p4
-<<<<<<< HEAD
 grid.arrange(p3, p4, ncol = 2)
-grid.arrange(p1, p4, ncol = 2)
-=======
-grid.arrange(p3,p4,ncol=2)
-grid.arrange(p1,p3,ncol=2)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+grid.arrange(p1, p3, ncol = 2)
 #
 theme_lancet <- function(base_size = 14, base_family = "") {
   theme_minimal(base_size = base_size, base_family = base_family) +
@@ -2119,7 +1836,7 @@ for (comp in compartments) {
 }
 # Data for under five age groups
 under_five_data <- results_1_a_Tanzania[, c("time", under_five_cols)]
-head(under_five_data)#
+head(under_five_data) #
 results_1_a_Tanzania_under_five <- results_1_a_Tanzania[, c("time", under_five_cols)]
 results_1_b_Tanzania_under_five <- results_1_b_Tanzania[, c("time", under_five_cols)]
 results_1_c_Tanzania_under_five <- results_1_c_Tanzania[, c("time", under_five_cols)]
@@ -2160,44 +1877,26 @@ d_50_a <- sum(c(0, diff(rowSums(results_50_a_Tanzania_under_five[, D_cols]))))
 d_50_b <- sum(c(0, diff(rowSums(results_50_b_Tanzania_under_five[, D_cols]))))
 d_50_c <- sum(c(0, diff(rowSums(results_50_c_Tanzania_under_five[, D_cols]))))
 
-<<<<<<< HEAD
-# Deaths averted (MDA effect)
-d_1_d_a <- d_1_b - d_1_a # annual
-d_1_d_bi <- d_1_b - d_1_c # bi annual
-#
-d_5_d_a <- d_5_b - d_5_a
-d_5_d_bi <- d_5_b - d_5_c
-#
-d_10_d_a <- d_10_b - d_10_a
-d_10_d_bi <- d_10_b - d_10_c
-# ...............................................................................
+# Deaths averted (MDA effect):No MDA-MDA (minus AMR deaths )
+# No MDA  MDA
 
+# //d_1_d_a  <-  d_1_a  - d_1_a  # annual
+# //d_1_d_bi  <- d_1_b  - d_1_c  # bi annual
+# d_1_d_a  <-(d_1_b - AMRD_1_b) - (d_1_a - AMRD_1_a) The true version will be bellow AMRD
+# d_1_d_bi  <-(d_1_b - AMRD_1_b) - (d_1_c - AMRD_1_a)
+# //d_5_d_a  <- d_5_b  - d_5_a
+# //d_5_d_bi <- d_5_b  - d_5_c
+# d_5_d_a  <-(d_5_b - AMRD_5_b) - (d_5_a - AMRD_5_a)
+# d_5_d_bi  <-(d_5_b - AMRD_5_b) - (d_5_c - AMRD_5_a)
+# //d_10_d_a <- d_10_b - d_10_a
+# //d_10_d_bi <- d_10_b - d_10_c
+# d_10_d_a  <-(d_10_b - AMRD_10_b) - (d_10_a - AMRD_10_a)
+# d_10_d_bi  <-(d_10_b - AMRD_10_b) - (d_10_c - AMRD_10_a)
+# ...............................................................................
 # AMR related deaths
 AMRD_1_a <- sum(c(0, diff(rowSums(results_1_a_Tanzania_under_five[, AMRD_cols]))))
 AMRD_1_b <- sum(c(0, diff(rowSums(results_1_b_Tanzania_under_five[, AMRD_cols]))))
 AMRD_1_c <- sum(c(0, diff(rowSums(results_1_c_Tanzania_under_five[, AMRD_cols]))))
-=======
-#Deaths averted (MDA effect):No MDA-MDA (minus AMR deaths )
-             #No MDA  MDA
-
-#//d_1_d_a  <-  d_1_a  - d_1_a  # annual 
-#//d_1_d_bi  <- d_1_b  - d_1_c  # bi annual
-#d_1_d_a  <-(d_1_b - AMRD_1_b) - (d_1_a - AMRD_1_a) The true version will be bellow AMRD
-#d_1_d_bi  <-(d_1_b - AMRD_1_b) - (d_1_c - AMRD_1_a)
-#//d_5_d_a  <- d_5_b  - d_5_a
-#//d_5_d_bi <- d_5_b  - d_5_c
-#d_5_d_a  <-(d_5_b - AMRD_5_b) - (d_5_a - AMRD_5_a)
-#d_5_d_bi  <-(d_5_b - AMRD_5_b) - (d_5_c - AMRD_5_a)
-#//d_10_d_a <- d_10_b - d_10_a
-#//d_10_d_bi <- d_10_b - d_10_c
-#d_10_d_a  <-(d_10_b - AMRD_10_b) - (d_10_a - AMRD_10_a)
-#d_10_d_bi  <-(d_10_b - AMRD_10_b) - (d_10_c - AMRD_10_a)
-#...............................................................................
-#AMR related deaths
-AMRD_1_a<-sum(c(0, diff(rowSums(results_1_a_Tanzania_under_five[, AMRD_cols]))))
-AMRD_1_b<-sum(c(0, diff(rowSums(results_1_b_Tanzania_under_five[, AMRD_cols]))))
-AMRD_1_c<-sum(c(0, diff(rowSums(results_1_c_Tanzania_under_five[, AMRD_cols]))))
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 
 AMRD_5_a <- sum(c(0, diff(rowSums(results_5_a_Tanzania_under_five[, AMRD_cols]))))
 AMRD_5_b <- sum(c(0, diff(rowSums(results_5_b_Tanzania_under_five[, AMRD_cols]))))
@@ -2207,32 +1906,22 @@ AMRD_10_a <- sum(c(0, diff(rowSums(results_10_a_Tanzania_under_five[, AMRD_cols]
 AMRD_10_b <- sum(c(0, diff(rowSums(results_10_b_Tanzania_under_five[, AMRD_cols]))))
 AMRD_10_c <- sum(c(0, diff(rowSums(results_10_c_Tanzania_under_five[, AMRD_cols]))))
 
-<<<<<<< HEAD
 AMRD_50_a <- sum(c(0, diff(rowSums(results_50_a_Tanzania_under_five[, AMRD_cols]))))
 AMRD_50_b <- sum(c(0, diff(rowSums(results_50_b_Tanzania_under_five[, AMRD_cols]))))
 AMRD_50_c <- sum(c(0, diff(rowSums(results_50_c_Tanzania_under_five[, AMRD_cols]))))
+#
+d_1_d_a <- (d_1_b - AMRD_1_b) - (d_1_a - AMRD_1_a)
+d_1_d_bi <- (d_1_b - AMRD_1_b) - (d_1_c - AMRD_1_a)
+#
+d_5_d_a <- (d_5_b - AMRD_5_b) - (d_5_a - AMRD_5_a)
+d_5_d_bi <- (d_5_b - AMRD_5_b) - (d_5_c - AMRD_5_a)
+#
+d_10_d_a <- (d_10_b - AMRD_10_b) - (d_10_a - AMRD_10_a)
+d_10_d_bi <- (d_10_b - AMRD_10_b) - (d_10_c - AMRD_10_a)
 
-# AMR deaths increased (MDA effect)
+# Deaths increased by AMR (MDA effect)
 AMRD_1_d_a <- AMRD_1_b - AMRD_1_a # annual
 AMRD_1_d_bi <- AMRD_1_b - AMRD_1_c # bi annual
-=======
-AMRD_50_a<-sum(c(0, diff(rowSums(results_50_a_Tanzania_under_five[, AMRD_cols]))))
-AMRD_50_b<-sum(c(0, diff(rowSums(results_50_b_Tanzania_under_five[, AMRD_cols]))))
-AMRD_50_c<-sum(c(0, diff(rowSums(results_50_c_Tanzania_under_five[, AMRD_cols]))))
-#
-d_1_d_a  <-(d_1_b - AMRD_1_b) - (d_1_a - AMRD_1_a)
-d_1_d_bi  <-(d_1_b - AMRD_1_b) - (d_1_c - AMRD_1_a)
-#
-d_5_d_a  <-(d_5_b - AMRD_5_b) - (d_5_a - AMRD_5_a)
-d_5_d_bi  <-(d_5_b - AMRD_5_b) - (d_5_c - AMRD_5_a)
-#
-d_10_d_a  <-(d_10_b - AMRD_10_b) - (d_10_a - AMRD_10_a)
-d_10_d_bi  <-(d_10_b - AMRD_10_b) - (d_10_c - AMRD_10_a)
-
-#Deaths increased by AMR (MDA effect)
-AMRD_1_d_a  <-  AMRD_1_b  - AMRD_1_a  # annual
-AMRD_1_d_bi  <- AMRD_1_b  - AMRD_1_c  # bi annual
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 #
 AMRD_5_d_a <- AMRD_5_b - AMRD_5_a
 AMRD_5_d_bi <- AMRD_5_b - AMRD_5_c
@@ -2253,20 +1942,19 @@ AMR_Deaths <- data.frame(
   Deaths_millions = c(AMRD_1_b, AMRD_1_a, AMRD_1_c, AMRD_5_a, AMRD_5_b, AMRD_5_c, AMRD_10_a, AMRD_10_b, AMRD_10_c)
 )
 print(AMR_Deaths)
-<<<<<<< HEAD
 # Data frame for deaths averted
 # a.
-Deaths_averted <- data.frame(
+Tanzania_Deaths_averted <- data.frame(
   Scenario = c("1Y MDA", "1Y Bi-MDA", "5Y MDA", "5Y Bi-MDA", "10Y MDA", "10Y Bi-MDA"),
   Deaths_averted_millions = c(d_1_d_a, d_1_d_bi, d_5_d_a, d_5_d_bi, d_10_d_a, d_10_d_bi)
 )
-print(Deaths_averted)
+print(Tanzania_Deaths_averted)
 # b.
-AMR_Deaths_averted <- data.frame(
+Tanzania_AMR_Deaths_averted <- data.frame(
   Scenario = c("1Y MDA", "1Y Bi-MDA", "5Y MDA", "5Y Bi-MDA", "10Y MDA", "10Y Bi-MDA"),
   AMR_Deaths_averted_millions = c(AMRD_1_d_a, AMRD_1_d_bi, AMRD_5_d_a, AMRD_5_d_bi, AMRD_10_d_a, AMRD_10_d_bi)
 )
-print(AMR_Deaths_averted)
+print(Tanzania_AMR_Deaths_averted)
 # I.Net Benefit (Total)
 # A.Calculation
 # Excess AMR deaths caused by MDA (MDA scenario minus No-MDA baseline)
@@ -2275,29 +1963,6 @@ excess_AMRD_1_bi <- AMRD_1_c - AMRD_1_b
 excess_AMRD_5_a <- AMRD_5_a - AMRD_5_b
 excess_AMRD_5_bi <- AMRD_5_c - AMRD_5_b
 excess_AMRD_10_a <- AMRD_10_a - AMRD_10_b
-=======
-#Data frame for deaths averted
-#a.
-Tanzania_Deaths_averted <- data.frame(
-  Scenario = c("1Y MDA","1Y Bi-MDA", "5Y MDA","5Y Bi-MDA", "10Y MDA","10Y Bi-MDA"),
-  Deaths_averted_millions = c(d_1_d_a,d_1_d_bi, d_5_d_a,d_5_d_bi, d_10_d_a,d_10_d_bi)
-)
-print(Tanzania_Deaths_averted)
-#b.
-Tanzania_AMR_Deaths_averted <- data.frame(
-  Scenario = c("1Y MDA","1Y Bi-MDA", "5Y MDA","5Y Bi-MDA", "10Y MDA","10Y Bi-MDA"),
-  AMR_Deaths_averted_millions = c(AMRD_1_d_a,AMRD_1_d_bi,AMRD_5_d_a,AMRD_5_d_bi, AMRD_10_d_a,AMRD_10_d_bi)
-)
-print(Tanzania_AMR_Deaths_averted)
-#I.Net Benefit (Total) 
-# A.Calculation 
-#Excess AMR deaths caused by MDA (MDA scenario minus No-MDA baseline)
-excess_AMRD_1_a  <- AMRD_1_a  - AMRD_1_b   # annual MDA adds this many extra AMR deaths
-excess_AMRD_1_bi <- AMRD_1_c  - AMRD_1_b
-excess_AMRD_5_a  <- AMRD_5_a  - AMRD_5_b
-excess_AMRD_5_bi <- AMRD_5_c  - AMRD_5_b
-excess_AMRD_10_a  <- AMRD_10_a - AMRD_10_b
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 excess_AMRD_10_bi <- AMRD_10_c - AMRD_10_b
 # Net benefit  = Deaths averted by MDA − Excess AMR deaths caused by MDA
 # Positive = net benefit; Negative = net harm
@@ -2340,29 +2005,23 @@ net_benefit_summary$Net_benefit_pct_10Y <- round(net_benefit_summary$Net_benefit
 # ...............................................................................
 pacman::p_load(ggplot2, tidyr, dplyr, scales, gridExtra)
 # Long format : i will use stacked bar
-#net_long <- net_benefit_summary %>%
+# net_long <- net_benefit_summary %>%
 # select(Scenario, Strategy, Horizon, Deaths_averted, Excess_AMR_deaths) %>%
-  #utate(Excess_AMR_deaths = -Excess_AMR_deaths) %>%  # flip sign: harm shown below zero
-  #ivot_longer(
-   #cols = c(Deaths_averted, Excess_AMR_deaths),
-   #names_to  = "Component",
-   #values_to = "Deaths"
-  # %>%
-  #utate(Component = factor(Component,
-  # levels = c("Deaths_averted", "Excess_AMR_deaths"),
-  # labels = c("Deaths averted (MDA benefit)", "Excess AMR deaths (MDA harm)")))
+# utate(Excess_AMR_deaths = -Excess_AMR_deaths) %>%  # flip sign: harm shown below zero
+# ivot_longer(
+# cols = c(Deaths_averted, Excess_AMR_deaths),
+# names_to  = "Component",
+# values_to = "Deaths"
+# %>%
+# utate(Component = factor(Component,
+# levels = c("Deaths_averted", "Excess_AMR_deaths"),
+# labels = c("Deaths averted (MDA benefit)", "Excess AMR deaths (MDA harm)")))
 
 
 net_long <- net_benefit_summary %>%
-<<<<<<< HEAD
-  select(Scenario, Strategy, Horizon, Deaths_averted, Excess_AMR_deaths) %>%
-  mutate(Excess_AMR_deaths = -Excess_AMR_deaths) %>% # flip sign: harm shown below zero
-  pivot_longer(
-=======
   dplyr::select(Scenario, Strategy, Horizon, Deaths_averted, Excess_AMR_deaths) %>%
-  dplyr::mutate(Excess_AMR_deaths = -Excess_AMR_deaths) %>%  
+  dplyr::mutate(Excess_AMR_deaths = -Excess_AMR_deaths) %>%
   tidyr::pivot_longer(
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
     cols = c(Deaths_averted, Excess_AMR_deaths),
     names_to = "Component",
     values_to = "Deaths"
@@ -2389,13 +2048,8 @@ p_net_A <- ggplot(net_long, aes(x = Horizon, y = Deaths / 1000, fill = Component
   scale_y_continuous(labels = label_number(suffix = " K")) +
   facet_wrap(~Strategy, ncol = 2) +
   labs(
-<<<<<<< HEAD
-    title = "A", # "Net mortality benefit of MDA in under-5s",
-    subtitle = "Green = deaths averted | Orange = excess AMR deaths | Diamond = net balance",
-=======
-    #title = "A",#"Net mortality benefit of MDA in under-5s",
-    #subtitle = "Green = deaths averted | Orange = excess AMR deaths | Diamond = net balance",
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+    # title = "A",#"Net mortality benefit of MDA in under-5s",
+    # subtitle = "Green = deaths averted | Orange = excess AMR deaths | Diamond = net balance",
     x = "Time horizon",
     y = "Deaths (thousands)",
     fill = NULL
@@ -2468,24 +2122,20 @@ print(net_benefit_pct[, c("Scenario", "Deaths_averted_pct", "Excess_AMR_deaths_p
 
 # Visualisation of net benefit (%)
 pacman::p_load(ggplot2, tidyr, dplyr, scales, gridExtra)
-<<<<<<< HEAD
 # Long format
-=======
-# Long format 
-#et_pct_long <- net_benefit_pct %>%
+# et_pct_long <- net_benefit_pct %>%
 # select(Scenario, Strategy, Horizon, Deaths_averted_pct, Excess_AMR_deaths_pct) %>%
- #mutate(Excess_AMR_deaths_pct = -Excess_AMR_deaths_pct) %>%
-  #ivot_longer(
-   #cols      = c(Deaths_averted_pct, Excess_AMR_deaths_pct),
-   #names_to  = "Component",
-  # values_to = "Pct"
-  # %>%
- #mutate(Component = factor(Component,
-  # levels = c("Deaths_averted_pct", "Excess_AMR_deaths_pct"),
-   #labels = c("Deaths averted (MDA benefit)", "Excess AMR deaths (MDA harm)")))
+# mutate(Excess_AMR_deaths_pct = -Excess_AMR_deaths_pct) %>%
+# ivot_longer(
+# cols      = c(Deaths_averted_pct, Excess_AMR_deaths_pct),
+# names_to  = "Component",
+# values_to = "Pct"
+# %>%
+# mutate(Component = factor(Component,
+# levels = c("Deaths_averted_pct", "Excess_AMR_deaths_pct"),
+# labels = c("Deaths averted (MDA benefit)", "Excess AMR deaths (MDA harm)")))
 # Plot A: stacked butterfly (%)
-#Here is the new formula, MASS and dplyr conflict
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+# Here is the new formula, MASS and dplyr conflict
 net_pct_long <- net_benefit_pct %>%
   dplyr::select(Scenario, Strategy, Horizon, Deaths_averted_pct, Excess_AMR_deaths_pct) %>%
   dplyr::mutate(Excess_AMR_deaths_pct = -Excess_AMR_deaths_pct) %>%
@@ -2498,11 +2148,7 @@ net_pct_long <- net_benefit_pct %>%
     levels = c("Deaths_averted_pct", "Excess_AMR_deaths_pct"),
     labels = c("Deaths averted (MDA benefit)", "Excess AMR deaths (MDA harm)")
   ))
-<<<<<<< HEAD
-# Plot A: stacked butterfly (%)
-=======
 
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 p_net_pct_A <- ggplot(net_pct_long, aes(x = Horizon, y = Pct, fill = Component)) +
   geom_col(position = "stack", width = 0.6, color = "white", linewidth = 0.3) +
   geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
@@ -2580,44 +2226,39 @@ ggsave("Figure_NetMortalityBenefit_Pct.png",
 )
 
 
-<<<<<<< HEAD
-# Impact assessment on mortality
-change_1Y_a <- round((d_1_a - d_1_b) * 1000 / d_1_b, 2)
-=======
-#Cut-off
+# Cut-off
 #---------------------------------
-#Step 1: Function to compute cut-off
+# Step 1: Function to compute cut-off
 # Function to compute cumulative net benefit and extract cut-off year
 compute_cutoff <- function(out_mda, out_nomda, D_cols, AMRD_cols, horizon_years = 20) {
-  
   # Daily deaths: No-MDA minus MDA (deaths averted by MDA)
-  daily_deaths_averted <- 
+  daily_deaths_averted <-
     c(0, diff(rowSums(out_nomda[, D_cols]))) -
-    c(0, diff(rowSums(out_mda[,   D_cols])))
-  
+    c(0, diff(rowSums(out_mda[, D_cols])))
+
   # Daily excess AMR deaths: MDA minus No-MDA
-  daily_excess_AMRD <- 
-    c(0, diff(rowSums(out_mda[,   AMRD_cols]))) -
+  daily_excess_AMRD <-
+    c(0, diff(rowSums(out_mda[, AMRD_cols]))) -
     c(0, diff(rowSums(out_nomda[, AMRD_cols])))
-  
+
   # Daily net benefit
   daily_net <- daily_deaths_averted - daily_excess_AMRD
-  
+
   # Cumulative net benefit
   cum_net <- cumsum(daily_net)
-  
+
   # Time in years
   time_years <- seq(0, horizon_years, length.out = length(cum_net))
-  
+
   # Cut-off 1: year of peak cumulative net benefit (optimal stopping)
-  peak_day   <- which.max(cum_net)
-  peak_year  <- time_years[peak_day]
-  
+  peak_day <- which.max(cum_net)
+  peak_year <- time_years[peak_day]
+
   # Cut-off 2: year cumulative net benefit crosses zero (harm threshold)
   # (NA if it never crosses zero within the horizon)
-  cross_idx  <- which(cum_net < 0)[1]
+  cross_idx <- which(cum_net < 0)[1]
   cross_year <- if (!is.na(cross_idx)) time_years[cross_idx] else NA
-  
+
   return(list(
     time_years   = time_years,
     cum_net      = cum_net,
@@ -2628,70 +2269,69 @@ compute_cutoff <- function(out_mda, out_nomda, D_cols, AMRD_cols, horizon_years 
   ))
 }
 
-#Step 2: Parameter grid and simulation loop
+# Step 2: Parameter grid and simulation loop
 pacman::p_load(deSolve, dplyr, tidyr, ggplot2, scales)
 
 # Parameter grid
-mda_durations  <- c(14, 30, 60)          # days
-mda_freqs      <- c(1, 2)                # per year (1=annual, 2=bi-annual)
-horizon_years  <- 10
-tvec_long      <- seq(0, horizon_years * 365.25, 1)
+mda_durations <- c(14, 30, 60) # days
+mda_freqs <- c(1, 2) # per year (1=annual, 2=bi-annual)
+horizon_years <- 10
+tvec_long <- seq(0, horizon_years * 365.25, 1)
 
 # Storage
 results_grid <- list()
 
 for (dur in mda_durations) {
   for (freq in mda_freqs) {
-    
     cat("Running: duration =", dur, "| frequency =", freq, "\n")
-    
+
     # MDA parameters
-    parms_run <- parms  # start from your baseline parms
+    parms_run <- parms # start from your baseline parms
     parms_run$mda_duration <- dur
-    parms_run$r_mda        <- -log(1 - parms_run$mda_cov) / dur
+    parms_run$r_mda <- -log(1 - parms_run$mda_cov) / dur
     parms_run$mda_start_times <- (0:100) * (365.25 / freq)
-    
+
     # No-MDA parameters (same structure, MDA off)
     parms_nomda_run <- parms_noMDA
     parms_nomda_run$mda_start_times <- numeric(0)
-    
+
     # Run model
-    out_mda   <- bacteria.solve(tvec_long, state, parms_run)
+    out_mda <- bacteria.solve(tvec_long, state, parms_run)
     out_nomda <- bacteria.solve(tvec_long, state, parms_nomda_run)
-    
+
     # Data frames
-    out_mda   <- as.data.frame(out_mda)
+    out_mda <- as.data.frame(out_mda)
     out_nomda <- as.data.frame(out_nomda)
-    
+
     # Column indices in output (offset +1 for time column)
-    D_cols_out    <- Dindex    + 1
+    D_cols_out <- Dindex + 1
     AMRD_cols_out <- AMRDindex + 1
-    
+
     # Under-5 only (ages 0-4)
-    under5_D_cols    <- (Dindex[1:5])    + 1
+    under5_D_cols <- (Dindex[1:5]) + 1
     under5_AMRD_cols <- (AMRDindex[1:5]) + 1
-    
+
     # Compute cut-off
     res <- compute_cutoff(
-      out_mda   = out_mda,
+      out_mda = out_mda,
       out_nomda = out_nomda,
-      D_cols    = under5_D_cols,
+      D_cols = under5_D_cols,
       AMRD_cols = under5_AMRD_cols,
       horizon_years = horizon_years
     )
-    
+
     # Store results
     results_grid[[paste(dur, freq, sep = "_")]] <- data.frame(
-      Duration     = dur,
-      Frequency    = freq,
-      Freq_label   = ifelse(freq == 1, "Annual MDA", "Bi-annual MDA"),
-      Peak_year    = round(res$peak_year,  2),
-      Cross_year   = round(res$cross_year, 2),
-      Peak_net     = res$peak_net,
+      Duration = dur,
+      Frequency = freq,
+      Freq_label = ifelse(freq == 1, "Annual MDA", "Bi-annual MDA"),
+      Peak_year = round(res$peak_year, 2),
+      Cross_year = round(res$cross_year, 2),
+      Peak_net = res$peak_net,
       # Store trajectory for curve plots
       stringsAsFactors = FALSE
     )
-    
+
     # Also store full trajectory for curve plot
     results_grid[[paste(dur, freq, "traj", sep = "_")]] <- data.frame(
       Duration    = dur,
@@ -2715,28 +2355,36 @@ df_traj <- bind_rows(
 
 # Factor labels
 df_summary$Duration_label <- paste0(df_summary$Duration, "-day MDA")
-df_traj$Duration_label    <- paste0(df_traj$Duration,    "-day MDA")
+df_traj$Duration_label <- paste0(df_traj$Duration, "-day MDA")
 
 df_summary$Duration_label <- factor(df_summary$Duration_label,
-  levels = c("14-day MDA", "30-day MDA", "60-day MDA"))
+  levels = c("14-day MDA", "30-day MDA", "60-day MDA")
+)
 df_traj$Duration_label <- factor(df_traj$Duration_label,
-  levels = c("14-day MDA", "30-day MDA", "60-day MDA"))
+  levels = c("14-day MDA", "30-day MDA", "60-day MDA")
+)
 
 print(df_summary)
 
-#Step 3: Plots
-#Plot A — Cumulative net benefit trajectories (with cut-off marked)
+# Step 3: Plots
+# Plot A — Cumulative net benefit trajectories (with cut-off marked)
 
 # Vertical lines at peak year per scenario
 peak_lines <- df_summary %>%
   select(Duration_label, Freq_label, Peak_year)
 
-p_traj <- ggplot(df_traj,
-  aes(x = Time_years, y = Cum_net / 1000,
-    color = Freq_label, linetype = Freq_label)) +
+p_traj <- ggplot(
+  df_traj,
+  aes(
+    x = Time_years, y = Cum_net / 1000,
+    color = Freq_label, linetype = Freq_label
+  )
+) +
   geom_line(linewidth = 0.9) +
-  geom_hline(yintercept = 0, linetype = "dashed",
-    color = "grey40", linewidth = 0.5) +
+  geom_hline(
+    yintercept = 0, linetype = "dashed",
+    color = "grey40", linewidth = 0.5
+  ) +
   # Mark peak year
   geom_vline(
     data = peak_lines,
@@ -2759,22 +2407,22 @@ p_traj <- ggplot(df_traj,
   )) +
   scale_y_continuous(labels = label_number(suffix = " K")) +
   scale_x_continuous(breaks = seq(0, horizon_years, by = 2)) +
-  facet_wrap(~ Duration_label, ncol = 3) +
+  facet_wrap(~Duration_label, ncol = 3) +
   labs(
-   # title    = "A ",#. Cumulative net mortality benefit over time",
+    # title    = "A ",#. Cumulative net mortality benefit over time",
     subtitle = "Dotted vertical = optimal stopping year | Dashed vertical = harm threshold",
-    x        = "Time (years)",
-    y        = "Cumulative net deaths averted",
-    color    = NULL, linetype = NULL
+    x = "Time (years)",
+    y = "Cumulative net deaths averted",
+    color = NULL, linetype = NULL
   ) +
   theme_classic(base_size = 13) +
   theme(
     legend.position = "bottom",
     axis.text.x = element_text(angle = 90, hjust = 1),
-    strip.text      = element_text(face = "bold", size = 12)
+    strip.text = element_text(face = "bold", size = 12)
   )
 print(p_traj)
-#Plot B — Cut-off year as the outcome (sensitivity analysis heatmap)
+# Plot B — Cut-off year as the outcome (sensitivity analysis heatmap)
 # Pivot to long for both cut-off types
 df_cutoff_long <- df_summary %>%
   pivot_longer(
@@ -2787,12 +2435,17 @@ df_cutoff_long <- df_summary %>%
     "Cross_year" = "Harm threshold year\n(net benefit = 0)"
   ))
 
-p_heatmap <- ggplot(df_cutoff_long,
-  aes(x = Freq_label, y = Duration_label, fill = Cutoff_year)) +
+p_heatmap <- ggplot(
+  df_cutoff_long,
+  aes(x = Freq_label, y = Duration_label, fill = Cutoff_year)
+) +
   geom_tile(color = "white", linewidth = 0.8) +
-  geom_text(aes(label = ifelse(is.na(Cutoff_year), "Never\ncrosses",
-    paste0("Year ", round(Cutoff_year, 1)))),
-    size = 4.5, color = "black") +
+  geom_text(
+    aes(label = ifelse(is.na(Cutoff_year), "Never\ncrosses",
+      paste0("Year ", round(Cutoff_year, 1))
+    )),
+    size = 4.5, color = "black"
+  ) +
   scale_fill_gradient2(
     low      = "#2166ac",
     mid      = "#f7f7f7",
@@ -2801,34 +2454,40 @@ p_heatmap <- ggplot(df_cutoff_long,
     na.value = "grey85",
     name     = "Year"
   ) +
-  facet_wrap(~ Cutoff_type, ncol = 2) +
+  facet_wrap(~Cutoff_type, ncol = 2) +
   labs(
-    #title = "B", #Sensitivity of MDA cut-off year to intervention parameters",
+    # title = "B", #Sensitivity of MDA cut-off year to intervention parameters",
     x     = "MDA frequency",
     y     = "MDA duration"
   ) +
   theme_classic(base_size = 13) +
   theme(
-    strip.text    = element_text(face = "bold", size = 12),
-    axis.text     = element_text(size = 11),
+    strip.text = element_text(face = "bold", size = 12),
+    axis.text = element_text(size = 11),
     legend.position = "right"
   )
 print(p_heatmap)
-#grid.arrange(p_traj, p_heatmap,ncol=2)
-#Plot C — Dot-and-line sensitivity plot (publication style)
-p_dot <- ggplot(df_summary,
-  aes(x = Duration_label, color = Freq_label)) +
+# grid.arrange(p_traj, p_heatmap,ncol=2)
+# Plot C — Dot-and-line sensitivity plot (publication style)
+p_dot <- ggplot(
+  df_summary,
+  aes(x = Duration_label, color = Freq_label)
+) +
   # Optimal stopping
-  geom_point(aes(y = Peak_year,  shape = "Optimal stopping"),
-    size = 4, position = position_dodge(0.4)) +
+  geom_point(aes(y = Peak_year, shape = "Optimal stopping"),
+    size = 4, position = position_dodge(0.4)
+  ) +
   # Harm threshold
   geom_point(aes(y = Cross_year, shape = "Harm threshold"),
-    size = 4, position = position_dodge(0.4)) +
-  geom_line(aes(y = Peak_year,  group = Freq_label),
-    position = position_dodge(0.4), linewidth = 0.8) +
+    size = 4, position = position_dodge(0.4)
+  ) +
+  geom_line(aes(y = Peak_year, group = Freq_label),
+    position = position_dodge(0.4), linewidth = 0.8
+  ) +
   geom_line(aes(y = Cross_year, group = Freq_label),
     linetype = "dashed",
-    position = position_dodge(0.4), linewidth = 0.8) +
+    position = position_dodge(0.4), linewidth = 0.8
+  ) +
   scale_color_manual(values = c(
     "Annual MDA"    = "#1f77b4",
     "Bi-annual MDA" = "#d62728"
@@ -2837,10 +2496,12 @@ p_dot <- ggplot(df_summary,
     "Optimal stopping" = 16,
     "Harm threshold"   = 17
   )) +
-  scale_y_continuous(breaks = seq(0, horizon_years, by = 2),
-    limits = c(0, horizon_years)) +
+  scale_y_continuous(
+    breaks = seq(0, horizon_years, by = 2),
+    limits = c(0, horizon_years)
+  ) +
   labs(
-    title  = "C",# Cut-off duration by MDA design parameters",
+    title  = "C", # Cut-off duration by MDA design parameters",
     x      = "MDA duration",
     y      = "Cut-off year",
     color  = "MDA frequency",
@@ -2857,48 +2518,47 @@ library(ggplot2)
 # Filter data for Cross_year (only where available)
 df_cross <- subset(df_summary, !is.na(Cross_year))
 
-p_dot_1 <- ggplot(df_summary, 
-  aes(x = Duration_label, color = Freq_label, group = Freq_label)) +
-  
-#Optimal stopping (Peak_year)
-geom_point(
-  aes(y = Peak_year, shape = "Optimal stopping"),
-  size = 4,
-  position = position_dodge(width = 0.4)
+p_dot_1 <- ggplot(
+  df_summary,
+  aes(x = Duration_label, color = Freq_label, group = Freq_label)
 ) +
-  
+
+  # Optimal stopping (Peak_year)
+  geom_point(
+    aes(y = Peak_year, shape = "Optimal stopping"),
+    size = 4,
+    position = position_dodge(width = 0.4)
+  ) +
   geom_line(
     aes(y = Peak_year),
     linewidth = 0.8,
     position = position_dodge(width = 0.4)
   ) +
-  
+
   # ---- Harm threshold (Cross_year) ----
-geom_point(
-  data = df_cross,
-  aes(y = Cross_year, shape = "Harm threshold"),
-  size = 4,
-  position = position_dodge(width = 0.4)
-) +
-  
+  geom_point(
+    data = df_cross,
+    aes(y = Cross_year, shape = "Harm threshold"),
+    size = 4,
+    position = position_dodge(width = 0.4)
+  ) +
+
   # (No geom_line for Cross_year → avoids misleading trends)
-  
+
   # ---- Scales ----
-scale_color_manual(values = c(
-  "Annual MDA"    = "#1f77b4",
-  "Bi-annual MDA" = "#d62728"
-)) +
-  
+  scale_color_manual(values = c(
+    "Annual MDA"    = "#1f77b4",
+    "Bi-annual MDA" = "#d62728"
+  )) +
   scale_shape_manual(values = c(
     "Optimal stopping" = 16,
     "Harm threshold"   = 17
   )) +
-  
   scale_y_continuous(
     breaks = seq(0, horizon_years, by = 5),
     limits = c(0, horizon_years)
   ) +
-  
+
   # Labels
   labs(
     title = "C",
@@ -2907,8 +2567,8 @@ scale_color_manual(values = c(
     color = "MDA frequency",
     shape = "Cut-off definition"
   ) +
-  
-  #  Theme 
+
+  #  Theme
   theme_classic(base_size = 13) +
   theme(
     legend.position = "bottom",
@@ -2916,27 +2576,28 @@ scale_color_manual(values = c(
   )
 
 print(p_dot_1)
-#Combine and save
+# Combine and save
 library(gridExtra)
 print(p_traj)
 print(p_heatmap)
 print(p_dot)
 print(p_dot_1)
 
-fig_final <- grid.arrange(p_traj, 
+fig_final <- grid.arrange(p_traj,
   grid.arrange(p_heatmap, p_dot, ncol = 2),
-  nrow = 2, heights = c(1.2, 1))
+  nrow = 2, heights = c(1.2, 1)
+)
 
 ggsave("Figure_Cutoff_Sensitivity.png",
-  plot   = fig_final,
-  width  = 16, height = 12,
-  dpi    = 300, bg = "white")
+  plot = fig_final,
+  width = 16, height = 12,
+  dpi = 300, bg = "white"
+)
 
 #------------------------------------
 
-#Impact assessment on mortality
-change_1Y_a <-round((d_1_a-d_1_b)*1000/d_1_b,2)
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+# Impact assessment on mortality
+change_1Y_a <- round((d_1_a - d_1_b) * 1000 / d_1_b, 2)
 change_1Y_a
 change_1Y_c <- round((d_1_c - d_1_b) * 1000 / d_1_b, 2)
 change_1Y_c
@@ -3446,29 +3107,18 @@ g_0_10 <- ggplot(dataset_10_long, aes(x = time, y = Proportion, color = scenario
     fill = "#C2A5CF",
     alpha = 0.4
   ) +
-<<<<<<< HEAD
   # geom_point(size = 1) +
   geom_line(linewidth = 1) +
-=======
-  #geom_point(size = 1) +
-  geom_line(linewidth = 1) + 
-  
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   scale_x_continuous(
     breaks = seq(min(dataset_10_long$time), max(dataset_10_long$time), by = 365)
   ) +
   scale_y_continuous(
-<<<<<<< HEAD
-    limits = c(0, 100),
-    breaks = seq(0, 100, by = 10)
-  ) +
-=======
     limits = c(0, 40),
-    breaks = seq(0, 40, by = 10)) +
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+    breaks = seq(0, 40, by = 10)
+  ) +
   labs(
-    #title = "Proportion of infection due to Escherichia coli resistant to macrolides  in Tanzania",
-    #subtitle = "Age-structured mixed-carriage model integrating within-and between host bacterial competitions",
+    # title = "Proportion of infection due to Escherichia coli resistant to macrolides  in Tanzania",
+    # subtitle = "Age-structured mixed-carriage model integrating within-and between host bacterial competitions",
     x = "Time (days)",
     y = "Resistance (%)",
     color = "Scenario"
@@ -4346,31 +3996,21 @@ legend(
 )
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 #              Additional-visualization                                  #
-<<<<<<< HEAD
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
 pacman::p_load(data.table) # This package will allow us to reshape data set faster
 results_1_Tanzania <- as.data.table(results_1_b_Tanzania)
-results_1_Tanzania <- results_1_Tanzania[, 1:(5 * n_age + 1)]
+head(results_1_Tanzania)
+# results_1_Tanzania <- results_1_Tanzania[, 1:(5 * n_age + 1)]
+head(results_1_Tanzania) # I will need to remove X as the resistance is calculated on colonized only
+library(dplyr)
+cols_keep <- grepl("^(time|R_|Rs_|S_|Sr_)", names(results_1_Tanzania))
+results_1_Tanzania <- results_1_Tanzania[, ..cols_keep] # .. need to be there
+head(results_1_Tanzania)
+
 # results_1_Tanzania<- as.data.table(results_1_b_Tanzania)
 # results_1_Tanzania<- as.data.table(results_1_c_Tanzania)
 # Long format : Here i will be using melt to be faster
-=======
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
-pacman::p_load(data.table)   # This package will allow us to reshape data set faster
-results_1_Tanzania<- as.data.table(results_1_b_Tanzania)
-head(results_1_Tanzania)
-#results_1_Tanzania <- results_1_Tanzania[, 1:(5 * n_age + 1)]
-head(results_1_Tanzania)# I will need to remove X as the resistance is calculated on colonized only
-library(dplyr)
-cols_keep <- grepl("^(time|R_|Rs_|S_|Sr_)", names(results_1_Tanzania))
-results_1_Tanzania <- results_1_Tanzania[, ..cols_keep]# .. need to be there
-head(results_1_Tanzania)
-
-#results_1_Tanzania<- as.data.table(results_1_b_Tanzania)
-#results_1_Tanzania<- as.data.table(results_1_c_Tanzania)
-#Long format : Here i will be using melt to be faster
 results_1_Tanzania
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 results_1_Tanzania_long <- melt(
   results_1_Tanzania,
   id.vars = "time",
@@ -4414,19 +4054,12 @@ table(results_1_Tanzania_long$compartment)
 R_RS_only <- results_1_Tanzania_long %>%
   filter(compartment %in% c("R", "Rs")) # Rs
 R_RS_only$proportion
-<<<<<<< HEAD
 plot_a_0 <- ggplot(
   R_RS_only,
   aes(x = age_group, y = proportion, fill = compartment)
 ) +
   geom_col(position = "stack", col = NA) + # or dodge
-  geom_hline(yintercept = 23, linetype = "dashed", color = "red", size = 1) +
-=======
-plot_a_0 <- ggplot(R_RS_only, 
-  aes(x = age_group, y = proportion, fill = compartment)) +
-  geom_col(position = "stack",col= NA) +#or dodge
   geom_hline(yintercept = 18.2, linetype = "dashed", color = "red", size = 1) +
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   # or use color = "white"
   scale_y_continuous(
     limits = c(0, 60),
@@ -4508,13 +4141,8 @@ pacman::p_load(data.table, ggplot2, scales, dplyr, patchwork)
 #
 # Results for each scenario
 process_scenario <- function(results_data_Tanzania, scenario_name) {
-<<<<<<< HEAD
   # Column names
-  compartment_names <- c("X", "S", "R", "Sr", "Rs")
-=======
-  # Column names 
   compartment_names <- c("S", "R", "Sr", "Rs")
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
   col_names <- c("time")
   for (comp in compartment_names) {
     for (age in age_groups) {
@@ -4561,25 +4189,12 @@ process_scenario <- function(results_data_Tanzania, scenario_name) {
 }
 
 # Process all three scenarios
-<<<<<<< HEAD
-results_1_a_Tanzania <- results_1_a_Tanzania[, 1:(5 * n_age + 1)]
-results_1_b_Tanzania <- results_1_b_Tanzania[, 1:(5 * n_age + 1)]
-results_1_c_Tanzania <- results_1_c_Tanzania[, 1:(5 * n_age + 1)]
-
-results_5_a_Tanzania <- results_5_a_Tanzania[, 1:(5 * n_age + 1)]
-results_5_b_Tanzania <- results_5_b_Tanzania[, 1:(5 * n_age + 1)]
-results_5_c_Tanzania <- results_5_c_Tanzania[, 1:(5 * n_age + 1)]
-
-results_10_a_Tanzania <- results_10_a_Tanzania[, 1:(5 * n_age + 1)]
-results_10_b_Tanzania <- results_10_b_Tanzania[, 1:(5 * n_age + 1)]
-results_10_c_Tanzania <- results_10_c_Tanzania[, 1:(5 * n_age + 1)]
-=======
-#results_1_a_Tanzania<-results_1_a_Tanzania[,1:(5*n_age+1)]
-#results_1_b_Tanzania<-results_1_b_Tanzania[,1:(5*n_age+1)]
-#results_1_c_Tanzania<-results_1_c_Tanzania[,1:(5*n_age+1)]
+# results_1_a_Tanzania<-results_1_a_Tanzania[,1:(5*n_age+1)]
+# results_1_b_Tanzania<-results_1_b_Tanzania[,1:(5*n_age+1)]
+# results_1_c_Tanzania<-results_1_c_Tanzania[,1:(5*n_age+1)]
 
 cols_keep <- grepl("^(time|R_|Rs_|S_|Sr_)", names(results_1_a_Tanzania))
-results_1_a_Tanzania <- results_1_a_Tanzania[, ..cols_keep]# .. need to be there
+results_1_a_Tanzania <- results_1_a_Tanzania[, ..cols_keep] # .. need to be there
 head(results_1_a_Tanzania)
 
 cols_keep <- grep("^(time$|S_|Sr_|R_|Rs_)", names(results_1_a_Tanzania), value = TRUE)
@@ -4588,20 +4203,19 @@ head(results_1_a_Tanzania)
 results_1_b_Tanzania <- results_1_b_Tanzania[, cols_keep]
 results_1_c_Tanzania <- results_1_c_Tanzania[, cols_keep]
 
-#results_5_a_Tanzania<-results_5_a_Tanzania[,1:(5*n_age+1)]
-#results_5_b_Tanzania<-results_5_b_Tanzania[,1:(5*n_age+1)]
-#results_5_c_Tanzania<-results_5_c_Tanzania[,1:(5*n_age+1)]
+# results_5_a_Tanzania<-results_5_a_Tanzania[,1:(5*n_age+1)]
+# results_5_b_Tanzania<-results_5_b_Tanzania[,1:(5*n_age+1)]
+# results_5_c_Tanzania<-results_5_c_Tanzania[,1:(5*n_age+1)]
 results_5_a_Tanzania <- results_5_a_Tanzania[, cols_keep]
 results_5_b_Tanzania <- results_5_b_Tanzania[, cols_keep]
 results_5_c_Tanzania <- results_5_c_Tanzania[, cols_keep]
 
-#results_10_a_Tanzania<-results_10_a_Tanzania[,1:(5*n_age+1)]
-#results_10_b_Tanzania<-results_10_b_Tanzania[,1:(5*n_age+1)]
-#results_10_c_Tanzania<-results_10_c_Tanzania[,1:(5*n_age+1)]
+# results_10_a_Tanzania<-results_10_a_Tanzania[,1:(5*n_age+1)]
+# results_10_b_Tanzania<-results_10_b_Tanzania[,1:(5*n_age+1)]
+# results_10_c_Tanzania<-results_10_c_Tanzania[,1:(5*n_age+1)]
 results_10_a_Tanzania <- results_10_a_Tanzania[, cols_keep]
 results_10_b_Tanzania <- results_10_b_Tanzania[, cols_keep]
 results_10_c_Tanzania <- results_10_c_Tanzania[, cols_keep]
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 
 scenario_1yr_no_MDA_Tanzania <- process_scenario(results_1_b_Tanzania, "1Y No-MDA")
 scenario_1yr_MDA_Tanzania <- process_scenario(results_1_a_Tanzania, "1Y MDA")
@@ -4757,18 +4371,13 @@ plot_dodged_5 <- ggplot(
   scale_y_continuous(limits = c(0, 100))
 print(plot_dodged_5)
 # Plot 2: Dodged bar plots comparing all three scenarios
-<<<<<<< HEAD
-plot_dodged_10 <- ggplot(
-  all_scenarios_Tanzania_10,
-  aes(x = age_group, y = proportion, fill = compartment)
-) +
-=======
 str(all_scenarios_Tanzania_10$age_group)
 age_levels_leq_15 <- as.character(0:15)
-plot_dodged_10 <- ggplot(all_scenarios_Tanzania_10|>
-    filter(age_group %in% age_levels_leq_15), 
-  aes(x = age_group, y = proportion, fill = compartment)) +
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
+plot_dodged_10 <- ggplot(
+  all_scenarios_Tanzania_10 |>
+    filter(age_group %in% age_levels_leq_15),
+  aes(x = age_group, y = proportion, fill = compartment)
+) +
   geom_col(position = "stack", col = NA) +
   geom_hline(yintercept = 18.2, linetype = "dashed", color = "black", size = 0.5) +
   facet_wrap(~scenario, ncol = 3) +
@@ -4780,17 +4389,10 @@ plot_dodged_10 <- ggplot(all_scenarios_Tanzania_10|>
     legend.position = "right"
   ) +
   labs(
-<<<<<<< HEAD
-    title = "C.",
-    subtitle = "",
+    # title = "C.",
+    # subtitle = "",
     x = "Age",
-    y = "Percent",
-=======
-    #title = "C.",
-    #subtitle = "",
-    x = "Age", 
     y = "Resistance(%)",
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
     fill = "Compartment"
   ) +
   scale_fill_manual(values = c(
@@ -4799,13 +4401,8 @@ plot_dodged_10 <- ggplot(all_scenarios_Tanzania_10|>
     "R" = "#fc726c",
     "Sr" = "#9b9602",
     "Rs" = "#00b3f4"
-<<<<<<< HEAD
   )) +
-  scale_y_continuous(limits = c(0, 100))
-=======
-  ))+
   scale_y_continuous(limits = c(0, 43))
->>>>>>> 713536f547e638aceea6f2bd9959eb8481d94733
 print(plot_dodged_10)
 # par(mfrow=c(1,3))
 print(plot_dodged_1)
