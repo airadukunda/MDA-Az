@@ -1,5 +1,5 @@
 ################################################################################
-# Azithromycin MDA and antimicrobial-resistant E. coli in Tanzania
+# Azithromycin MDA and antimicrobial-resistant S. aureus in Tanzania
 # Tidied analysis script
 #
 # This version keeps the core model, scenario runs, summary tables, and key plots.
@@ -27,7 +27,7 @@ config <- list(
   data_dir = ".",
 
   # Where to write output CSV files and figures.
-  output_dir = "outputs_tanzania_mda",
+  output_dir = "outputs_tanzania_mda_saureus",
   save_plots = TRUE,
 
   # Input units. The original files used values in thousands.
@@ -41,7 +41,7 @@ config <- list(
   # Time settings.
   days_per_year = 365.25,
   time_step_days = 1,
-  equilibrium_years = 110,
+  equilibrium_years = 1000,
   scenario_horizons_years = c(1, 5, 10),
   long_horizon_years = 20,
 
@@ -50,13 +50,10 @@ config <- list(
   #   "dynamic" uses the age-specific birth rates from the birth file.
   population_model = "static",
 
-  # Initial colonisation proportions, by age.
+  # Initial carriage proportions, by age.
   # These must sum to 1.
-  initial_uncolonised = 0.95,
-  initial_sensitive = 0.025,
-  initial_resistant = 0.025,
-  initial_sensitive_treated = 0,
-  initial_resistant_treated = 0
+  initial_carriage = 0.3,
+  initial_resistant_fraction = 0.2
 )
 
 input_files <- list(
@@ -70,27 +67,27 @@ input_files <- list(
 # monthly rates and converted to daily rates in make_parameters().
 baseline_parameters <- list(
   # Pathogen parameters.
-  beta.S = 0.03,
-  u.S_monthly = 1,
-  u.R_monthly = 1,
-  u.C_monthly = 1,
-  k = 0.5,
-  c = 0.20,
+  beta.S = 0.0007,
+  u.S_monthly = 0.082,
+  u.R_monthly = 0.090,
+  u.C_monthly = 0.082,
+  k = 0.1,
+  c = 0.11,
 
   # MDA azithromycin parameters.
-  a = 0.16,
-  a.C = 0.16,
+  a = 0.02,
+  a.C = 0.02,
   mda_duration = 30,
-  mda_cov = 1,
+  mda_cov = 0.85,
   theta = 0.13,
   targeted_age_indices = 1:5, # age groups 0, 1, 2, 3, 4
 
   # Baseline antibiotic use. a.use_p is DDD/1000 inhabitants/day.
-  a.use_p = 23.1,
-  d = 7,
+  a.use_p = 3.04,
+  d = 5,
 
   # AMR-attributable mortality rate.
-  amrd_rate = (27.3 / 100000 / 365) / (0.15 * 0.9),
+  amrd_rate = 0,
 
   # Other parameters kept for transparency, but not used directly by the ODE.
   kappa = 0
@@ -360,28 +357,26 @@ make_state_names <- function(age_groups) {
   unlist(lapply(compartments, function(comp) paste0(comp, "_", age_groups)))
 }
 
-make_initial_state <- function(population_vector, age_groups) {
-  proportions <- c(
-    config$initial_uncolonised,
-    config$initial_sensitive,
-    config$initial_resistant,
-    config$initial_sensitive_treated,
-    config$initial_resistant_treated
-  )
+make_initial_state_saureus <- function(population_vector, age_groups) {
+  n_age <- length(population_vector)
 
-  if (abs(sum(proportions) - 1) > 1e-8) {
-    stop("Initial compartment proportions must sum to 1.", call. = FALSE)
-  }
+  initial_carriage <- rep(1 - config$initial_carriage, n_age)
+
+  initial_resistant_fraction <- rep(config$initial_resistant_fraction, n_age)
+
+  initial_resistant <- initial_carriage * initial_resistant_fraction
+  initial_sensitive <- initial_carriage - initial_resistant
+  initial_uncolonised <- 1 - initial_carriage
 
   state <- c(
-    config$initial_uncolonised * population_vector,
-    config$initial_sensitive * population_vector,
-    config$initial_resistant * population_vector,
-    config$initial_sensitive_treated * population_vector,
-    config$initial_resistant_treated * population_vector,
-    rep(0, length(population_vector)),
-    rep(0, length(population_vector)),
-    rep(0, length(population_vector))
+    initial_uncolonised * population_vector,
+    initial_sensitive * population_vector,
+    initial_resistant * population_vector,
+    rep(0, n_age), # Sr
+    rep(0, n_age), # Rs
+    rep(0, n_age), # D
+    rep(0, n_age), # CumIncR
+    rep(0, n_age) # AMRD
   )
 
   names(state) <- make_state_names(age_groups)
@@ -469,7 +464,7 @@ make_no_mda_parameters <- function(parameters) {
 # 4. ODE system and model runner
 # -----------------------------------------------------------------------------
 
-ecoli_odes <- function(t, state, parameters) {
+saureus_odes <- function(t, state, parameters) {
   idx <- parameters$idx
 
   X <- state[idx$X]
@@ -543,7 +538,7 @@ solve_model <- function(times, state, parameters) {
   as.data.frame(deSolve::ode(
     y = state,
     times = times,
-    func = ecoli_odes,
+    func = saureus_odes,
     parms = parameters,
     method = "lsoda"
   ))
@@ -576,7 +571,7 @@ summarise_model_output <- function(out, indices, days_per_year) {
     sensitive = sensitive,
     resistant = resistant,
     resistance_prevalence = 100 * resistant / colonised,
-    colonisation_prevalence = 100 * colonised / total_population,
+    carriage_prevalence = 100 * colonised / total_population,
     cumulative_deaths = cumulative_deaths,
     non_amr_deaths = cumulative_deaths - cumulative_amr_deaths,
     cumulative_amr_deaths = cumulative_amr_deaths,
@@ -638,7 +633,7 @@ summarise_by_age_band <- function(out, indices, age_groups, days_per_year) {
       colonised = colonised,
       sensitive = sensitive,
       resistant = resistant,
-      colonisation_prevalence = 100 * colonised / total_population,
+      carriage_prevalence = 100 * colonised / total_population,
       resistance_prevalence = dplyr::if_else(
         colonised > 0,
         100 * resistant / colonised,
@@ -747,15 +742,15 @@ plot_resistance_time_series <- function(time_series) {
     ggplot2::labs(
       title = "Resistance prevalence over time",
       x = "Time (years)",
-      y = "Resistant among colonised (%)",
+      y = "Resistant among carriers (%)",
       colour = "Scenario"
     ) +
     ggplot2::theme_classic(base_size = 12) +
     ggplot2::theme(legend.position = "bottom")
 }
 
-plot_resistant_fraction_among_colonised_by_age <- function(time_series_by_age,
-                                                           horizon = 10) {
+plot_resistant_fraction_among_carriers_by_age <- function(time_series_by_age,
+                                                          horizon = 10) {
   time_series_by_age |>
     dplyr::filter(
       horizon_years == horizon,
@@ -772,12 +767,12 @@ plot_resistant_fraction_among_colonised_by_age <- function(time_series_by_age,
     ggplot2::facet_wrap(~age_band, scales = "free_y") +
     ggplot2::labs(
       title = paste0(
-        "Macrolide-resistant E. coli fraction among colonised over ",
+        "Macrolide-resistant S. aureus fraction among carriers over ",
         horizon,
         " years"
       ),
       x = "Time since scenario start (years)",
-      y = "Macrolide-resistant among colonised (%)",
+      y = "Macrolide-resistant among carriers (%)",
       colour = "Scenario"
     ) +
     ggplot2::theme_classic(base_size = 12) +
@@ -816,7 +811,7 @@ plot_resistance_endpoint <- function(endpoints) {
     ggplot2::labs(
       title = "Resistance prevalence at the end of each horizon",
       x = "Horizon (years)",
-      y = "Resistant among colonised (%)",
+      y = "Resistant among carriers (%)",
       fill = "Scenario"
     ) +
     ggplot2::theme_classic(base_size = 12) +
@@ -932,7 +927,7 @@ inputs <- load_model_inputs()
 indices <- make_indices(inputs$n_age)
 ageing <- make_ageing_matrix(inputs$n_age, config$days_per_year)
 parameters <- make_parameters(inputs, indices, ageing)
-initial_state <- make_initial_state(inputs$population_vector, inputs$age_groups)
+initial_state <- make_initial_state_saureus(inputs$population_vector, inputs$age_groups)
 
 message("Running no-MDA equilibrium burn-in...")
 equilibrium_parameters <- make_no_mda_parameters(parameters)
@@ -1050,7 +1045,7 @@ resistance_time_plot <- plot_resistance_time_series(time_series)
 net_deaths_plot <- plot_net_deaths_averted(comparison)
 endpoint_resistance_plot <- plot_resistance_endpoint(endpoints)
 resistant_fraction_by_age_plot <-
-  plot_resistant_fraction_among_colonised_by_age(
+  plot_resistant_fraction_among_carriers_by_age(
     time_series_by_age,
     horizon = 10
   )
@@ -1068,7 +1063,7 @@ save_plot(
 )
 save_plot(
   resistant_fraction_by_age_plot,
-  "resistant_fraction_among_colonised_over_time_by_age.png",
+  "resistant_fraction_among_carriers_over_time_by_age.png",
   width = 10,
   height = 7
 )
@@ -1089,3 +1084,80 @@ print(
 )
 
 message("Done. Outputs written to: ", normalizePath(config$output_dir, mustWork = FALSE))
+
+# -----------------------------------------------------------------------------
+# 11. Calibration
+# -----------------------------------------------------------------------------
+calibrate_beta_to_overall_carriage <- function(parameters,
+                                               initial_state,
+                                               target_carriage = 0.30,
+                                               years = config$equilibrium_years,
+                                               lower = 0.001,
+                                               upper = 0.5) {
+  objective <- function(beta) {
+    p <- parameters
+    p$beta.S <- beta
+
+    p_no_mda <- make_no_mda_parameters(p)
+
+    out <- solve_model(
+      times = make_times(years),
+      state = initial_state,
+      parameters = p_no_mda
+    )
+
+    summary <- summarise_model_output(
+      out,
+      indices,
+      config$days_per_year
+    )
+
+    endpoint <- summary[nrow(summary), ]
+
+    model_carriage <- endpoint$carriage_prevalence / 100
+
+    (model_carriage - target_carriage)^2
+  }
+
+  stats::optimize(
+    objective,
+    interval = c(lower, upper)
+  )$minimum
+}
+
+message(
+  "Overall carriage prevalence: ",
+  round(equilibrium_summary$carriage_prevalence[nrow(equilibrium_summary)], 3)
+)
+
+# parameters$beta.S <- calibrate_beta_to_overall_carriage(
+#   parameters = parameters,
+#   initial_state = initial_state,
+#   target_carriage = 0.30
+# )
+
+saureus_targets <- tibble::tibble(
+  age_band = factor(
+    c("0", "1-4", "5-17", "18-64", "65+"),
+    levels = c("0", "1-4", "5-17", "18-64", "65+")
+  ),
+  target_carriage = c(0.30, 0.30, 0.25, 0.25, 0.20),
+  target_resistant_among_carried = c(0.20, 0.20, 0.20, 0.20, 0.20)
+)
+
+calibration_check_saureus <- equilibrium_summary_by_age |>
+  dplyr::group_by(age_band) |>
+  dplyr::slice_tail(n = 1) |>
+  dplyr::ungroup() |>
+  dplyr::left_join(saureus_targets, by = "age_band") |>
+  dplyr::mutate(
+    model_carriage = carriage_prevalence / 100,
+    model_resistance = resistance_prevalence / 100,
+    carriage_difference = model_carriage - target_carriage,
+    resistance_difference = model_resistance - target_resistant_among_carried
+  )
+
+readr::write_csv(
+  calibration_check_saureus,
+  output_path("calibration_check_saureus_by_age_band.csv")
+)
