@@ -75,11 +75,11 @@ baseline_parameters <- list(
   c = 0.11,
 
   # MDA azithromycin parameters.
-  a = 0.02,
-  a.C = 0.02,
+  mda_p_clear_S = 0.22,
+  mda_p_select_C = 0.22,
   mda_duration = 30,
-  mda_cov = 0.85,
-  theta = 0.13,
+  mda_cov = 0.9,
+  theta = 0,
   targeted_age_indices = 1:5, # age groups 0, 1, 2, 3, 4
 
   # Baseline antibiotic use. a.use_p is DDD/1000 inhabitants/day.
@@ -217,6 +217,19 @@ convert_units_to_persons <- function(x, units) {
     return(1000 * x)
   }
   x
+}
+
+check_mda_coverage <- function(mda_cov, mda_duration) {
+  mda_cov_safe <- min(max(mda_cov, 0), 0.999999)
+  r_mda <- -log1p(-mda_cov_safe) / mda_duration
+  achieved_cov <- 1 - exp(-r_mda * mda_duration)
+
+  tibble::tibble(
+    requested_coverage = mda_cov,
+    mda_duration_days = mda_duration,
+    treatment_rate_per_day = r_mda,
+    achieved_coverage = achieved_cov
+  )
 }
 
 # -----------------------------------------------------------------------------
@@ -393,13 +406,26 @@ mda_schedule <- function(total_years, frequency_per_year, mda_years = NULL) {
   }
 
   active_years <- min(total_years, mda_years %||% total_years)
+
   if (active_years <= 0) {
     return(numeric(0))
   }
 
   interval_days <- config$days_per_year / frequency_per_year
-  end_day <- active_years * config$days_per_year
-  seq(0, end_day - 1e-8, by = interval_days)
+
+  # annual for 2 years   -> 2 rounds: 0, 1
+  # biannual for 2 years -> 4 rounds: 0, 0.5, 1.0, 1.5
+  n_rounds <- floor(active_years * frequency_per_year)
+
+  if (n_rounds <= 0) {
+    return(numeric(0))
+  }
+
+  seq(
+    from = 0,
+    by = interval_days,
+    length.out = n_rounds
+  )
 }
 
 make_parameters <- function(inputs, indices, ageing) {
@@ -414,11 +440,9 @@ make_parameters <- function(inputs, indices, ageing) {
   targeted <- targeted[targeted >= 1 & targeted <= inputs$n_age]
   azt[targeted] <- 1
 
-  r_mda <- if (baseline_parameters$mda_cov >= 1) {
-    Inf
-  } else {
-    -log(1 - baseline_parameters$mda_cov) / baseline_parameters$mda_duration
-  }
+  mda_cov_safe <- min(max(baseline_parameters$mda_cov, 0), 0.999999)
+
+  r_mda <- -log1p(-mda_cov_safe) / baseline_parameters$mda_duration
 
   list(
     beta.S = baseline_parameters$beta.S,
@@ -427,8 +451,8 @@ make_parameters <- function(inputs, indices, ageing) {
     u.C = daily_u.C,
     k = baseline_parameters$k,
     c = baseline_parameters$c,
-    a = baseline_parameters$a,
-    a.C = baseline_parameters$a.C,
+    mda_p_clear_S = baseline_parameters$mda_p_clear_S,
+    mda_p_select_C = baseline_parameters$mda_p_select_C,
     mda_duration = baseline_parameters$mda_duration,
     mda_cov = baseline_parameters$mda_cov,
     theta = baseline_parameters$theta,
@@ -452,8 +476,6 @@ make_parameters <- function(inputs, indices, ageing) {
 }
 
 make_no_mda_parameters <- function(parameters) {
-  parameters$a <- 0
-  parameters$a.C <- 0
   parameters$theta <- 0
   parameters$use_mda <- FALSE
   parameters$mda_start_times <- numeric(0)
@@ -486,9 +508,17 @@ saureus_odes <- function(t, state, parameters) {
   is_mda <- isTRUE(parameters$use_mda) &&
     mda_active(t, parameters$mda_start_times, parameters$mda_duration)
 
-  mda_effect <- as.numeric(is_mda) * parameters$mda_cov * parameters$azt
-  a_t <- parameters$tau + parameters$a * mda_effect
-  a.C_t <- parameters$tau + parameters$a.C * mda_effect
+  mda_treatment_rate <- if (is_mda) {
+    parameters$r_mda * parameters$azt
+  } else {
+    rep(0, parameters$n_age)
+  }
+
+  a_t <- parameters$tau +
+    parameters$mda_p_clear_S * mda_treatment_rate
+
+  a.C_t <- parameters$tau +
+    parameters$mda_p_select_C * mda_treatment_rate
 
   mort_eff <- parameters$mort
   if (is_mda) {
@@ -546,6 +576,17 @@ solve_model <- function(times, state, parameters) {
 
 make_times <- function(years) {
   seq(0, years * config$days_per_year, by = config$time_step_days)
+}
+
+make_scenario_times <- function(horizon_years, parameters) {
+  base_times <- make_times(horizon_years)
+
+  mda_times <- c(
+    parameters$mda_start_times,
+    parameters$mda_start_times + parameters$mda_duration
+  )
+
+  sort(unique(c(base_times, mda_times)))
 }
 
 # -----------------------------------------------------------------------------
@@ -740,9 +781,9 @@ plot_resistance_time_series <- function(time_series) {
     ggplot2::geom_line(linewidth = 0.8) +
     ggplot2::facet_wrap(~horizon_years, scales = "free_x", labeller = ggplot2::label_both) +
     ggplot2::labs(
-      title = "Resistance prevalence over time",
+      title = "Macrolide-resistance prevalence over time (S. aureus)",
       x = "Time (years)",
-      y = "Resistant among carriers (%)",
+      y = "Macrolide-resistant among carriers (%)",
       colour = "Scenario"
     ) +
     ggplot2::theme_classic(base_size = 12) +
@@ -767,9 +808,9 @@ plot_resistant_fraction_among_carriers_by_age <- function(time_series_by_age,
     ggplot2::facet_wrap(~age_band, scales = "free_y") +
     ggplot2::labs(
       title = paste0(
-        "Macrolide-resistant S. aureus fraction among carriers over ",
+        "Macrolide-resistance prevalence by age group over ",
         horizon,
-        " years"
+        " years (S. aureus)"
       ),
       x = "Time since scenario start (years)",
       y = "Macrolide-resistant among carriers (%)",
@@ -809,9 +850,9 @@ plot_resistance_endpoint <- function(endpoints) {
     )) +
     ggplot2::geom_col(position = "dodge") +
     ggplot2::labs(
-      title = "Resistance prevalence at the end of each horizon",
+      title = "Resistance prevalence at the end of each horizon (S. aureus)",
       x = "Horizon (years)",
-      y = "Resistant among carriers (%)",
+      y = "Macrolide-resistant among carriers (%)",
       fill = "Scenario"
     ) +
     ggplot2::theme_classic(base_size = 12) +
@@ -837,7 +878,7 @@ run_scenario <- function(name, horizon_years, base_state, base_parameters,
     )
   }
 
-  times <- make_times(horizon_years)
+  times <- make_scenario_times(horizon_years, parameters)
   output <- solve_model(times, base_state, parameters)
 
   list(
@@ -928,6 +969,13 @@ indices <- make_indices(inputs$n_age)
 ageing <- make_ageing_matrix(inputs$n_age, config$days_per_year)
 parameters <- make_parameters(inputs, indices, ageing)
 initial_state <- make_initial_state_saureus(inputs$population_vector, inputs$age_groups)
+
+print(
+  check_mda_coverage(
+    mda_cov = baseline_parameters$mda_cov,
+    mda_duration = baseline_parameters$mda_duration
+  )
+)
 
 message("Running no-MDA equilibrium burn-in...")
 equilibrium_parameters <- make_no_mda_parameters(parameters)
