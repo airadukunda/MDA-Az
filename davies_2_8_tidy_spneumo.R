@@ -1,11 +1,5 @@
 ################################################################################
 # Azithromycin MDA and antimicrobial-resistant S. pneumoniae in Tanzania
-#
-# How to use:
-#   1. Put this script in the same folder as the input CSV files, or edit
-#      config$data_dir below.
-#   2. Check the assumptions in config and baseline_parameters.
-#   3. Run the script. Tables and figures are written to config$output_dir.
 ################################################################################
 
 # -----------------------------------------------------------------------------

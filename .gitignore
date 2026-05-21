@@ -13,6 +13,7 @@ outputs/
 *.pdf
 *.rds
 *.log
+*.md
 
 # OS junk
 .DS_Store
@@ -21,4 +22,3 @@ Thumbs.db
 model_rhs.cpp
 validation_script.R
 *_sean.R
-*_spneumo.R
