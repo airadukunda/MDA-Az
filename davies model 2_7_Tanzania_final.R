@@ -306,10 +306,8 @@ bacteria.odes <- function(t, state, parameters) {
     #//bc <- ifelse(is_mda, a.C ,0)
     #//a.C_t <- bc * azt + tau
     #Option C   : with exponential decay (rmda, mda_p_clear_S and mda_p_select_C)
-     a_t <- parms$tau +
-      parms$mda_p_clear_S * r_mda  # mda_treatment_rate
-    a.C_t <- parms$tau +
-      parms$mda_p_select_C * r_mda # mda_treatment_rate
+     a_t <- parms$tau + parms$mda_p_clear_S * r_mda  # mda_treatment_rate
+     a.C_t <- parms$tau + parms$mda_p_select_C * r_mda # mda_treatment_rate
     
     #Mortality
     mort_eff <- mort
