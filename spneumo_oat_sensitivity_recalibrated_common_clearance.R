@@ -1,0 +1,926 @@
+# =============================================================================
+# One-at-a-time sensitivity analysis for S. pneumoniae MDA model
+# =============================================================================
+
+# This script assumes davies_2_8_tidy_spneumo.R is the calibrated baseline model
+# It sources that script once, then runs one-at-a-time sensitivity analyses
+# around the calibrated baseline parameter set.
+
+# -----------------------------------------------------------------------------
+# 0a. Execution mode
+# -----------------------------------------------------------------------------
+
+# Normal use: RUN_ALL_CASES defaults to TRUE and the full OAT analysis runs.
+# SLURM worker use: set RUN_ALL_CASES=FALSE before source() so this file only
+# defines objects/functions and does not launch all sensitivity cases.
+RUN_ALL_CASES <- isTRUE(as.logical(Sys.getenv("RUN_ALL_CASES", "TRUE")))
+
+# -----------------------------------------------------------------------------
+# 0. Load calibrated model
+# -----------------------------------------------------------------------------
+
+source("davies_2_8_tidy_spneumo.R")
+
+# Put sensitivity outputs in a subfolder.
+base_output_dir <- config$output_dir
+config$output_dir <- file.path(base_output_dir, "sensitivity_oat_spneumo_recalibrated")
+make_dir(config$output_dir)
+
+message("Sensitivity outputs will be written to: ", normalizePath(config$output_dir))
+
+# Save baseline objects so that each sensitivity case starts from the same point.
+baseline_parameters_reference <- baseline_parameters
+config_reference <- config
+
+# -----------------------------------------------------------------------------
+# 1. Sensitivity specifications
+# -----------------------------------------------------------------------------
+
+make_oat_specs_spneumo <- function(bp) {
+  tibble::tribble(
+    ~case_id, ~parameter, ~level, ~value, ~description,
+    "baseline", "baseline", "baseline", NA_real_,
+    "Calibrated baseline parameter set",
+    "c_low", "c", "low", 0.02,
+    "Low resistance fitness cost",
+    "c_high", "c", "high", 0.15,
+    "High resistance fitness cost",
+    "k_low", "k", "low", 0.20,
+    "Low co-colonisation efficiency",
+    "k_high", "k", "high", 1.00,
+    "High co-colonisation efficiency",
+    "mda_cov_low", "mda_cov", "low", 0.70,
+    "Lower MDA coverage",
+    "mda_cov_high", "mda_cov", "high", 0.95,
+    "Higher MDA coverage",
+    "mda_effect_low", "mda_effect_multiplier", "low", 0.50,
+    "Half baseline MDA treatment effect",
+    "mda_effect_high", "mda_effect_multiplier", "high", 2.00,
+    "Double baseline MDA treatment effect",
+    "mda_duration_short", "mda_duration", "low", 14,
+    "Shorter MDA campaign window",
+    "mda_duration_long", "mda_duration", "high", 60,
+    "Longer MDA campaign window",
+    "clearance_low", "clearance_multiplier", "low", 0.50,
+    "Half baseline clearance for all S. pneumoniae carriage states",
+    "clearance_high", "clearance_multiplier", "high", 2.00,
+    "Double baseline clearance for all S. pneumoniae carriage states",
+    "macrolide_use_low", "macrolide_use_multiplier", "low", 0.50,
+    "Half baseline background macrolide pressure",
+    "macrolide_use_high", "macrolide_use_multiplier", "high", 1.50,
+    "One and a half times baseline background macrolide pressure",
+    "beta_low", "beta.S_start_multiplier", "low", 0.75,
+    "Lower transmission coefficient",
+    "beta_high", "beta.S_start_multiplier", "high", 1.25,
+    "Higher transmission coefficient"
+  )
+}
+
+oat_specs <- make_oat_specs_spneumo(baseline_parameters_reference)
+
+
+# -----------------------------------------------------------------------------
+# 1b. Baseline-preserving calibration for sensitivity analysis
+# -----------------------------------------------------------------------------
+
+# In this version of the OAT analysis, beta and background macrolide/antibiotic
+# pressure are treated as calibration parameters, not sensitivity parameters.
+# For each one-at-a-time sensitivity case, they are recalibrated so that the
+# matched no-MDA baseline stays close to the calibrated baseline model.
+calibration_parameter_names <- c("beta.S_start_multiplier", "macrolide_use_multiplier")
+
+oat_specs <- oat_specs |>
+  dplyr::filter(!parameter %in% calibration_parameter_names)
+
+beta_parameter_name <- "beta.S_start"
+background_parameter_name <- "macrolide_use_ddd_per_1000_per_day"
+
+get_endpoint_carriage <- function(endpoint) {
+  if ("colonisation_prevalence" %in% names(endpoint)) {
+    return(endpoint$colonisation_prevalence)
+  }
+  if ("carriage_prevalence" %in% names(endpoint)) {
+    return(endpoint$carriage_prevalence)
+  }
+  stop("Could not find colonisation_prevalence or carriage_prevalence in endpoint.")
+}
+
+get_endpoint_resistance <- function(endpoint) {
+  if ("resistance_prevalence" %in% names(endpoint)) {
+    return(endpoint$resistance_prevalence)
+  }
+  if ("resistant_among_carried" %in% names(endpoint)) {
+    return(endpoint$resistant_among_carried)
+  }
+  stop("Could not find resistance_prevalence or resistant_among_carried in endpoint.")
+}
+
+get_clearance_multiplier <- function(bp) {
+  if ("clearance_multiplier" %in% names(bp) &&
+      is.finite(bp$clearance_multiplier)) {
+    return(bp$clearance_multiplier)
+  }
+  1
+}
+
+apply_common_clearance_multiplier <- function(parameters, bp) {
+  clearance_multiplier <- get_clearance_multiplier(bp)
+
+  # This varies overall carriage duration while preserving the relative
+  # clearance rates of susceptible, resistant, and mixed carriage.
+  parameters$u.S <- parameters$u.S * clearance_multiplier
+  parameters$u.R <- parameters$u.R * clearance_multiplier
+  parameters$u.C <- parameters$u.C * clearance_multiplier
+
+  parameters
+}
+
+evaluate_no_mda_equilibrium <- function(bp,
+                                        equilibrium_years = config$equilibrium_years,
+                                        keep_output = FALSE) {
+  baseline_parameters <<- bp
+  p <- make_parameters(inputs, indices, ageing)
+  p <- apply_common_clearance_multiplier(p, bp)
+  p_no_mda <- make_no_mda_parameters(p)
+
+  out <- solve_model(
+    times = make_times(equilibrium_years),
+    state = initial_state,
+    parameters = p_no_mda
+  )
+
+  summary <- summarise_model_output(
+    out = out,
+    indices = indices,
+    days_per_year = config$days_per_year
+  )
+
+  endpoint <- summary |>
+    dplyr::slice_tail(n = 1)
+
+  equilibrium_state <- as.numeric(out[nrow(out), -1])
+  names(equilibrium_state) <- make_state_names(inputs$age_groups)
+
+  if (keep_output) {
+    return(list(
+      parameters = p,
+      no_mda_parameters = p_no_mda,
+      output = out,
+      summary = summary,
+      endpoint = endpoint,
+      equilibrium_state = equilibrium_state
+    ))
+  }
+
+  list(endpoint = endpoint)
+}
+
+baseline_calibration_endpoint <- evaluate_no_mda_equilibrium(
+  baseline_parameters_reference,
+  keep_output = FALSE
+)$endpoint
+
+target_baseline_carriage <- get_endpoint_carriage(baseline_calibration_endpoint)
+target_baseline_resistance <- get_endpoint_resistance(baseline_calibration_endpoint)
+
+calibration_targets <- tibble::tibble(
+  target = c("baseline_carriage_percent", "baseline_resistance_percent"),
+  value = c(target_baseline_carriage, target_baseline_resistance)
+)
+
+message(
+  "Baseline-preserving calibration targets: carriage = ",
+  signif(target_baseline_carriage, 4),
+  "%, resistance = ",
+  signif(target_baseline_resistance, 4),
+  "%"
+)
+
+make_positive_bounds <- function(center,
+                                 lower_multiplier = 0.02,
+                                 upper_multiplier = 50,
+                                 absolute_lower = 1e-8,
+                                 absolute_upper = Inf) {
+  center <- max(center, absolute_lower)
+  lower <- max(center * lower_multiplier, absolute_lower)
+  upper <- min(center * upper_multiplier, absolute_upper)
+
+  if (!is.finite(upper) || upper <= lower) {
+    upper <- lower * 100
+  }
+
+  c(lower, upper)
+}
+
+calibrate_scalar_parameter <- function(bp,
+                                       parameter_name,
+                                       target,
+                                       metric = c("carriage", "resistance"),
+                                       lower,
+                                       upper,
+                                       tolerance = 1e-3) {
+  metric <- match.arg(metric)
+
+  objective <- function(log_value) {
+    bp_test <- bp
+    bp_test[[parameter_name]] <- exp(log_value)
+
+    value <- tryCatch({
+      endpoint <- evaluate_no_mda_equilibrium(
+        bp_test,
+        keep_output = FALSE
+      )$endpoint
+
+      if (metric == "carriage") {
+        get_endpoint_carriage(endpoint)
+      } else {
+        get_endpoint_resistance(endpoint)
+      }
+    }, error = function(e) {
+      NA_real_
+    })
+
+    if (!is.finite(value)) {
+      return(1e12)
+    }
+
+    ((value - target) / max(abs(target), 1))^2
+  }
+
+  opt <- stats::optimize(
+    objective,
+    interval = log(c(lower, upper)),
+    tol = tolerance
+  )
+
+  bp[[parameter_name]] <- exp(opt$minimum)
+  bp
+}
+
+calibrate_baseline_for_case <- function(bp,
+                                        n_iter = 2,
+                                        beta_bounds = NULL,
+                                        background_bounds = NULL) {
+  if (is.null(beta_bounds)) {
+    beta_bounds <- make_positive_bounds(
+      baseline_parameters_reference[[beta_parameter_name]],
+      lower_multiplier = 0.02,
+      upper_multiplier = 50,
+      absolute_lower = 1e-8
+    )
+  }
+
+  if (is.null(background_bounds)) {
+    background_bounds <- make_positive_bounds(
+      baseline_parameters_reference[[background_parameter_name]],
+      lower_multiplier = 0.02,
+      upper_multiplier = 50,
+      absolute_lower = 1e-8
+    )
+  }
+
+  for (i in seq_len(n_iter)) {
+    bp <- calibrate_scalar_parameter(
+      bp = bp,
+      parameter_name = beta_parameter_name,
+      target = target_baseline_carriage,
+      metric = "carriage",
+      lower = beta_bounds[1],
+      upper = beta_bounds[2]
+    )
+
+    bp <- calibrate_scalar_parameter(
+      bp = bp,
+      parameter_name = background_parameter_name,
+      target = target_baseline_resistance,
+      metric = "resistance",
+      lower = background_bounds[1],
+      upper = background_bounds[2]
+    )
+  }
+
+  final_eval <- evaluate_no_mda_equilibrium(
+    bp,
+    keep_output = TRUE
+  )
+
+  endpoint <- final_eval$endpoint
+
+  diagnostics <- tibble::tibble(
+    calibrated_beta = bp[[beta_parameter_name]],
+    calibrated_background_pressure = bp[[background_parameter_name]],
+    target_carriage = target_baseline_carriage,
+    achieved_carriage = get_endpoint_carriage(endpoint),
+    target_resistance = target_baseline_resistance,
+    achieved_resistance = get_endpoint_resistance(endpoint),
+    carriage_error_pp = achieved_carriage - target_baseline_carriage,
+    resistance_error_pp = achieved_resistance - target_baseline_resistance
+  )
+
+  list(
+    baseline_parameters = bp,
+    parameters = final_eval$parameters,
+    equilibrium_output = final_eval$output,
+    equilibrium_state = final_eval$equilibrium_state,
+    calibration_diagnostics = diagnostics
+  )
+}
+
+# -----------------------------------------------------------------------------
+# 2. Apply one sensitivity change to baseline_parameters
+# -----------------------------------------------------------------------------
+
+apply_spneumo_sensitivity_change <- function(bp, parameter, value) {
+  if (parameter == "baseline") {
+    return(bp)
+  }
+
+  if (parameter == "c") {
+    bp$c <- value
+    return(bp)
+  }
+
+  if (parameter == "k") {
+    bp$k <- value
+    return(bp)
+  }
+
+  if (parameter == "mda_cov") {
+    bp$mda_cov <- value
+    return(bp)
+  }
+
+  if (parameter == "mda_duration") {
+    bp$mda_duration <- value
+    return(bp)
+  }
+
+  if (parameter == "clearance_multiplier") {
+    bp$clearance_multiplier <- value
+    return(bp)
+  }
+
+  if (parameter == "macrolide_use_multiplier") {
+    bp$macrolide_use_ddd_per_1000_per_day <-
+      baseline_parameters_reference$macrolide_use_ddd_per_1000_per_day * value
+    return(bp)
+  }
+
+  if (parameter == "beta.S_start_multiplier") {
+    bp$beta.S_start <- baseline_parameters_reference$beta.S_start * value
+    return(bp)
+  }
+
+  if (parameter == "mda_effect_multiplier") {
+    # Supports either the old formulation:
+    #   a, a.C
+    # or the newer realistic-coverage formulation:
+    #   mda_p_clear_S, mda_p_select_C
+    if ("mda_p_clear_S" %in% names(bp) && "mda_p_select_C" %in% names(bp)) {
+      bp$mda_p_clear_S <- baseline_parameters_reference$mda_p_clear_S * value
+      bp$mda_p_select_C <- baseline_parameters_reference$mda_p_select_C * value
+    } else {
+      bp$a <- baseline_parameters_reference$a * value
+      bp$a.C <- baseline_parameters_reference$a.C * value
+    }
+
+    return(bp)
+  }
+
+  stop("Unknown sensitivity parameter: ", parameter)
+}
+
+# -----------------------------------------------------------------------------
+# 3. Scenario set for sensitivity analysis
+# -----------------------------------------------------------------------------
+
+make_sensitivity_scenarios <- function() {
+  tibble::tribble(
+    ~scenario, ~horizon_years, ~frequency_per_year, ~mda_years,
+    "No MDA", 10, NA_real_, NA_real_,
+    "Annual MDA", 10, 1, NA_real_,
+    "Biannual MDA", 10, 2, NA_real_,
+    "Annual MDA stopped after 5 years", 10, 1, 5,
+    "Biannual MDA stopped after 5 years", 10, 2, 5,
+    "No MDA", 5.5, NA_real_, NA_real_,
+    "MORDOR-style biannual MDA for 2 years", 5.5, 2, 2
+  )
+}
+
+sensitivity_scenarios <- make_sensitivity_scenarios()
+
+# -----------------------------------------------------------------------------
+# 4. Helpers for summarising outcomes
+# -----------------------------------------------------------------------------
+
+summarise_age_group_endpoint <- function(time_series_by_age,
+                                         age_bands,
+                                         group_name) {
+  time_series_by_age |>
+    dplyr::filter(age_band %in% age_bands) |>
+    dplyr::group_by(
+      scenario,
+      horizon_years,
+      frequency_per_year,
+      mda_years,
+      time_days,
+      time_years
+    ) |>
+    dplyr::summarise(
+      total_population = sum(total_population, na.rm = TRUE),
+      colonised = sum(colonised, na.rm = TRUE),
+      resistant = sum(resistant, na.rm = TRUE),
+      carriage_prevalence = dplyr::if_else(
+        total_population > 0,
+        100 * colonised / total_population,
+        NA_real_
+      ),
+      resistant_among_carried = dplyr::if_else(
+        colonised > 0,
+        100 * resistant / colonised,
+        NA_real_
+      ),
+      .groups = "drop"
+    ) |>
+    dplyr::group_by(horizon_years, scenario) |>
+    dplyr::slice_tail(n = 1) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(outcome_group = group_name)
+}
+
+add_no_mda_comparison_age_group <- function(group_endpoints) {
+  no_mda <- group_endpoints |>
+    dplyr::filter(scenario == "No MDA") |>
+    dplyr::select(
+      horizon_years,
+      outcome_group,
+      no_mda_resistant_among_carried = resistant_among_carried,
+      no_mda_carriage_prevalence = carriage_prevalence
+    )
+
+  group_endpoints |>
+    dplyr::left_join(
+      no_mda,
+      by = c("horizon_years", "outcome_group")
+    ) |>
+    dplyr::mutate(
+      resistance_difference_percentage_points =
+        resistant_among_carried - no_mda_resistant_among_carried,
+      carriage_difference_percentage_points =
+        carriage_prevalence - no_mda_carriage_prevalence
+    )
+}
+
+extract_case_outputs <- function(case_metadata,
+                                 time_series_all,
+                                 time_series_by_age) {
+  endpoints_all <- endpoint_summary(time_series_all)
+  comparison_all <- compare_with_no_mda(endpoints_all) |>
+    dplyr::mutate(outcome_group = "all_ages")
+
+  under5_endpoints <- summarise_age_group_endpoint(
+    time_series_by_age,
+    age_bands = c("0", "1-4"),
+    group_name = "under5"
+  ) |>
+    add_no_mda_comparison_age_group()
+
+  adult_endpoints <- summarise_age_group_endpoint(
+    time_series_by_age,
+    age_bands = c("18-64", "65+"),
+    group_name = "adults_18plus"
+  ) |>
+    add_no_mda_comparison_age_group()
+
+  comparison_age_groups <- dplyr::bind_rows(
+    under5_endpoints,
+    adult_endpoints
+  )
+
+  all_age_summary <- comparison_all |>
+    dplyr::select(
+      horizon_years,
+      scenario,
+      outcome_group,
+      resistance_prevalence,
+      colonisation_prevalence,
+      resistance_difference_percentage_points
+    ) |>
+    dplyr::rename(
+      resistant_among_carried = resistance_prevalence,
+      carriage_prevalence = colonisation_prevalence
+    )
+
+  age_group_summary <- comparison_age_groups |>
+    dplyr::select(
+      horizon_years,
+      scenario,
+      outcome_group,
+      resistant_among_carried,
+      carriage_prevalence,
+      resistance_difference_percentage_points
+    )
+
+  dplyr::bind_rows(
+    all_age_summary,
+    age_group_summary
+  ) |>
+    dplyr::mutate(
+      case_id = case_metadata$case_id,
+      parameter = case_metadata$parameter,
+      level = case_metadata$level,
+      value = case_metadata$value,
+      description = case_metadata$description,
+      .before = 1
+    )
+}
+
+# -----------------------------------------------------------------------------
+# 5. Run one sensitivity case
+# -----------------------------------------------------------------------------
+
+run_spneumo_oat_case <- function(case_row) {
+  case_row <- as.list(case_row)
+
+  message(
+    "Running sensitivity case: ",
+    case_row$case_id,
+    " (", case_row$description, ")"
+  )
+
+  # Modify baseline_parameters for this case.
+  bp_case <- apply_spneumo_sensitivity_change(
+    bp = baseline_parameters_reference,
+    parameter = case_row$parameter,
+    value = case_row$value
+  )
+
+  # Recalibrate baseline transmission and background macrolide/antibiotic pressure
+  # so that this sensitivity case has the same no-MDA baseline carriage and
+  # resistance as the calibrated baseline model.
+  calibrated_case <- calibrate_baseline_for_case(bp_case)
+
+  bp_case <- calibrated_case$baseline_parameters
+  parameters_case <- calibrated_case$parameters
+  equilibrium_state_case <- calibrated_case$equilibrium_state
+  calibration_diagnostics_case <- calibrated_case$calibration_diagnostics
+
+  message(
+    "  calibrated ", beta_parameter_name, " = ",
+    signif(bp_case[[beta_parameter_name]], 4),
+    "; calibrated ", background_parameter_name, " = ",
+    signif(bp_case[[background_parameter_name]], 4),
+    "; carriage error = ",
+    signif(calibration_diagnostics_case$carriage_error_pp, 3),
+    " pp; resistance error = ",
+    signif(calibration_diagnostics_case$resistance_error_pp, 3),
+    " pp"
+  )
+
+  # Run compact scenario set.
+  case_results <- purrr::pmap(
+    sensitivity_scenarios,
+    function(scenario, horizon_years, frequency_per_year, mda_years) {
+      run_scenario(
+        name = scenario,
+        horizon_years = horizon_years,
+        base_state = equilibrium_state_case,
+        base_parameters = parameters_case,
+        frequency_per_year = frequency_per_year,
+        mda_years = if (is.na(mda_years)) NULL else mda_years
+      )
+    }
+  )
+
+  time_series_all <- purrr::map_dfr(case_results, function(result) {
+    summarise_model_output(
+      out = result$output,
+      indices = indices,
+      days_per_year = config$days_per_year
+    ) |>
+      dplyr::mutate(
+        scenario = result$scenario,
+        horizon_years = result$horizon_years,
+        frequency_per_year = result$frequency_per_year,
+        mda_years = result$mda_years %||% result$horizon_years,
+        .before = 1
+      )
+  })
+
+  time_series_by_age_case <- purrr::map_dfr(case_results, function(result) {
+    summarise_by_age_band(
+      out = result$output,
+      indices = indices,
+      age_groups = inputs$age_groups,
+      days_per_year = config$days_per_year
+    ) |>
+      dplyr::mutate(
+        scenario = result$scenario,
+        horizon_years = result$horizon_years,
+        frequency_per_year = result$frequency_per_year,
+        mda_years = result$mda_years %||% result$horizon_years,
+        .before = 1
+      )
+  })
+
+  case_summary <- extract_case_outputs(
+    case_metadata = case_row,
+    time_series_all = time_series_all,
+    time_series_by_age = time_series_by_age_case
+  ) |>
+    dplyr::mutate(
+      calibrated_beta = calibration_diagnostics_case$calibrated_beta,
+      calibrated_background_pressure = calibration_diagnostics_case$calibrated_background_pressure,
+      achieved_baseline_carriage = calibration_diagnostics_case$achieved_carriage,
+      achieved_baseline_resistance = calibration_diagnostics_case$achieved_resistance,
+      baseline_carriage_error_pp = calibration_diagnostics_case$carriage_error_pp,
+      baseline_resistance_error_pp = calibration_diagnostics_case$resistance_error_pp
+    )
+
+  list(
+    case_summary = case_summary,
+    time_series_all = time_series_all |>
+      dplyr::mutate(
+        case_id = case_row$case_id,
+        parameter = case_row$parameter,
+        level = case_row$level,
+        value = case_row$value,
+        .before = 1
+      ),
+    time_series_by_age = time_series_by_age_case |>
+      dplyr::mutate(
+        case_id = case_row$case_id,
+        parameter = case_row$parameter,
+        level = case_row$level,
+        value = case_row$value,
+        .before = 1
+      )
+  )
+}
+
+# -----------------------------------------------------------------------------
+# 6. Run all OAT cases
+# -----------------------------------------------------------------------------
+
+if (RUN_ALL_CASES) {
+  oat_results <- purrr::map(
+    seq_len(nrow(oat_specs)),
+    function(i) {
+      tryCatch(
+        run_spneumo_oat_case(oat_specs[i, ]),
+        error = function(e) {
+          warning(
+            "Sensitivity case failed: ",
+            oat_specs$case_id[i],
+            " -- ",
+            conditionMessage(e)
+          )
+
+          list(
+            case_summary = tibble::tibble(
+              case_id = oat_specs$case_id[i],
+              parameter = oat_specs$parameter[i],
+              level = oat_specs$level[i],
+              value = oat_specs$value[i],
+              description = oat_specs$description[i],
+              horizon_years = NA_real_,
+              scenario = NA_character_,
+              outcome_group = NA_character_,
+              resistant_among_carried = NA_real_,
+              carriage_prevalence = NA_real_,
+              resistance_difference_percentage_points = NA_real_
+            ),
+            time_series_all = tibble::tibble(),
+            time_series_by_age = tibble::tibble()
+          )
+        }
+      )
+    }
+  )
+
+  # Restore baseline parameters.
+  baseline_parameters <<- baseline_parameters_reference
+
+  sensitivity_summary <- purrr::map_dfr(oat_results, "case_summary")
+  sensitivity_time_series_all <- purrr::map_dfr(oat_results, "time_series_all")
+  sensitivity_time_series_by_age <- purrr::map_dfr(oat_results, "time_series_by_age")
+
+  # -----------------------------------------------------------------------------
+  # 7. Tornado plot helpers
+  # -----------------------------------------------------------------------------
+
+  make_tornado_data <- function(sensitivity_summary,
+                                scenario_name = "Biannual MDA",
+                                horizon = 10,
+                                outcome_group_name = "all_ages") {
+    primary <- sensitivity_summary |>
+      dplyr::filter(
+        horizon_years == horizon,
+        scenario == scenario_name,
+        outcome_group == outcome_group_name,
+        !is.na(resistance_difference_percentage_points)
+      )
+
+    baseline_value <- primary |>
+      dplyr::filter(parameter == "baseline") |>
+      dplyr::slice(1) |>
+      dplyr::pull(resistance_difference_percentage_points)
+
+    primary |>
+      dplyr::filter(parameter != "baseline") |>
+      dplyr::group_by(parameter) |>
+      dplyr::summarise(
+        min_effect = min(resistance_difference_percentage_points, na.rm = TRUE),
+        max_effect = max(resistance_difference_percentage_points, na.rm = TRUE),
+        range = max_effect - min_effect,
+        baseline_effect = baseline_value,
+        .groups = "drop"
+      ) |>
+      dplyr::arrange(dplyr::desc(abs(range)))
+  }
+
+  plot_oat_tornado <- function(tornado_data,
+                              title = "One-at-a-time sensitivity analysis",
+                              x_label = "10-year increase vs no MDA (percentage points)") {
+    ggplot2::ggplot(
+      tornado_data,
+      ggplot2::aes(
+        y = reorder(parameter, abs(range))
+      )
+    ) +
+      ggplot2::geom_segment(
+        ggplot2::aes(
+          x = min_effect,
+          xend = max_effect,
+          yend = reorder(parameter, abs(range))
+        ),
+        linewidth = 1
+      ) +
+      ggplot2::geom_point(
+        ggplot2::aes(x = min_effect),
+        size = 2
+      ) +
+      ggplot2::geom_point(
+        ggplot2::aes(x = max_effect),
+        size = 2
+      ) +
+      ggplot2::geom_vline(
+        ggplot2::aes(xintercept = baseline_effect),
+        linetype = "dashed",
+        linewidth = 0.5
+      ) +
+      ggplot2::labs(
+        title = title,
+        x = x_label,
+        y = "Parameter varied"
+      ) +
+      ggplot2::theme_classic(base_size = 12)
+  }
+
+  plot_oat_endpoint_points <- function(sensitivity_summary,
+                                      scenario_name = "Biannual MDA",
+                                      horizon = 10,
+                                      outcome_group_name = "all_ages") {
+    sensitivity_summary |>
+      dplyr::filter(
+        horizon_years == horizon,
+        scenario == scenario_name,
+        outcome_group == outcome_group_name,
+        !is.na(resistance_difference_percentage_points)
+      ) |>
+      dplyr::mutate(
+        case_label = dplyr::if_else(
+          parameter == "baseline",
+          "baseline",
+          paste0(parameter, " / ", level)
+        )
+      ) |>
+      ggplot2::ggplot(
+        ggplot2::aes(
+          x = resistance_difference_percentage_points,
+          y = reorder(case_label, resistance_difference_percentage_points)
+        )
+      ) +
+      ggplot2::geom_point(size = 2.2) +
+      ggplot2::labs(
+        title = paste0(
+          "S. pneumoniae OAT sensitivity: ",
+          scenario_name,
+          ", ",
+          horizon,
+          " years"
+        ),
+        x = "Increase in resistant among carriers vs no MDA (percentage points)",
+        y = NULL
+      ) +
+      ggplot2::theme_classic(base_size = 12)
+  }
+
+  # -----------------------------------------------------------------------------
+  # 8. Save outputs
+  # -----------------------------------------------------------------------------
+
+  # Write calibration targets used by the baseline-preserving sensitivity analysis.
+  readr::write_csv(
+    calibration_targets,
+    output_path("oat_baseline_preserving_calibration_targets.csv")
+  )
+
+
+  readr::write_csv(
+    oat_specs,
+    output_path("spneumo_oat_sensitivity_specs.csv")
+  )
+
+  readr::write_csv(
+    sensitivity_summary,
+    output_path("spneumo_oat_sensitivity_summary.csv")
+  )
+
+  readr::write_csv(
+    sensitivity_time_series_all,
+    output_path("spneumo_oat_time_series_all_ages.csv")
+  )
+
+  readr::write_csv(
+    sensitivity_time_series_by_age,
+    output_path("spneumo_oat_time_series_by_age.csv")
+  )
+
+  tornado_biannual_10y_all <- make_tornado_data(
+    sensitivity_summary,
+    scenario_name = "Biannual MDA",
+    horizon = 10,
+    outcome_group_name = "all_ages"
+  )
+
+  tornado_annual_10y_all <- make_tornado_data(
+    sensitivity_summary,
+    scenario_name = "Annual MDA",
+    horizon = 10,
+    outcome_group_name = "all_ages"
+  )
+
+  readr::write_csv(
+    tornado_biannual_10y_all,
+    output_path("spneumo_oat_tornado_biannual_10y_all_ages.csv")
+  )
+
+  readr::write_csv(
+    tornado_annual_10y_all,
+    output_path("spneumo_oat_tornado_annual_10y_all_ages.csv")
+  )
+
+  tornado_biannual_plot <- plot_oat_tornado(
+    tornado_biannual_10y_all,
+    title = "S. pneumoniae sensitivity: biannual MDA at 10 years"
+  )
+
+  tornado_annual_plot <- plot_oat_tornado(
+    tornado_annual_10y_all,
+    title = "S. pneumoniae sensitivity: annual MDA at 10 years"
+  )
+
+  endpoint_points_plot <- plot_oat_endpoint_points(
+    sensitivity_summary,
+    scenario_name = "Biannual MDA",
+    horizon = 10,
+    outcome_group_name = "all_ages"
+  )
+
+  save_plot(
+    tornado_biannual_plot,
+    "spneumo_oat_tornado_biannual_10y_all_ages.png",
+    width = 8,
+    height = 5
+  )
+
+  save_plot(
+    tornado_annual_plot,
+    "spneumo_oat_tornado_annual_10y_all_ages.png",
+    width = 8,
+    height = 5
+  )
+
+  save_plot(
+    endpoint_points_plot,
+    "spneumo_oat_endpoint_points_biannual_10y_all_ages.png",
+    width = 8,
+    height = 6
+  )
+
+  saveRDS(
+    list(
+      oat_specs = oat_specs,
+      sensitivity_summary = sensitivity_summary,
+      sensitivity_time_series_all = sensitivity_time_series_all,
+      sensitivity_time_series_by_age = sensitivity_time_series_by_age,
+      tornado_biannual_10y_all = tornado_biannual_10y_all,
+      tornado_annual_10y_all = tornado_annual_10y_all
+    ),
+    file = output_path("spneumo_oat_sensitivity_outputs.rds")
+  )
+
+  message("OAT sensitivity analysis complete.")
+  message("Outputs written to: ", normalizePath(config$output_dir, mustWork = FALSE))
+}

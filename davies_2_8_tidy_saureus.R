@@ -57,10 +57,10 @@ input_files <- list(
 # monthly rates and converted to daily rates in make_parameters().
 baseline_parameters <- list(
   # Pathogen parameters.
-  beta.S = 0.0007,
-  u.S_monthly = 0.082,
-  u.R_monthly = 0.090,
-  u.C_monthly = 0.082,
+  beta.S = 0.0006864,
+  u.S_monthly = 0.083,
+  u.R_monthly = 0.083,
+  u.C_monthly = 0.083,
   k = 0.1,
   c = 0.11,
 
@@ -73,7 +73,7 @@ baseline_parameters <- list(
   targeted_age_indices = 1:5, # age groups 0, 1, 2, 3, 4
 
   # Baseline antibiotic use. a.use_p is DDD/1000 inhabitants/day.
-  a.use_p = 3.04,
+  a.use_p = 1.65505,
   d = 5,
 
   # AMR-attributable mortality rate.
@@ -762,13 +762,28 @@ plot_contact_matrix <- function(inputs) {
 
 plot_resistance_time_series <- function(time_series) {
   time_series |>
-    dplyr::filter(scenario %in% c("No MDA", "Annual MDA", "Biannual MDA")) |>
+    dplyr::filter(scenario %in% c("No MDA", "Annual MDA", "Biannual MDA", "Quarterly MDA")) |>
+    dplyr::mutate(
+      scenario = factor(
+        scenario,
+        levels = c("Annual MDA", "Biannual MDA", "Quarterly MDA", "No MDA")
+      )
+    ) |>
     ggplot2::ggplot(ggplot2::aes(
       x = time_years,
       y = resistance_prevalence,
       colour = scenario
     )) +
     ggplot2::geom_line(linewidth = 0.8) +
+    ggplot2::scale_colour_manual(
+      values = c(
+        "Annual MDA" = "#F8766D",
+        "Biannual MDA" = "#00BA38",
+        "Quarterly MDA" = "#C77CFF",
+        "No MDA" = "#619CFF"
+      ),
+      breaks = c("Annual MDA", "Biannual MDA", "Quarterly MDA", "No MDA")
+    ) +
     ggplot2::facet_wrap(~horizon_years, scales = "free_x", labeller = ggplot2::label_both) +
     ggplot2::labs(
       title = "Macrolide-resistance prevalence over time (S. aureus)",
@@ -785,7 +800,13 @@ plot_resistant_fraction_among_carriers_by_age <- function(time_series_by_age,
   time_series_by_age |>
     dplyr::filter(
       horizon_years == horizon,
-      scenario %in% c("No MDA", "Annual MDA", "Biannual MDA")
+      scenario %in% c("No MDA", "Annual MDA", "Biannual MDA", "Quarterly MDA")
+    ) |>
+    dplyr::mutate(
+      scenario = factor(
+        scenario,
+        levels = c("Annual MDA", "Biannual MDA", "Quarterly MDA", "No MDA")
+      )
     ) |>
     ggplot2::ggplot(
       ggplot2::aes(
@@ -795,6 +816,15 @@ plot_resistant_fraction_among_carriers_by_age <- function(time_series_by_age,
       )
     ) +
     ggplot2::geom_line(linewidth = 0.8) +
+    ggplot2::scale_colour_manual(
+      values = c(
+        "Annual MDA" = "#F8766D",
+        "Biannual MDA" = "#00BA38",
+        "Quarterly MDA" = "#C77CFF",
+        "No MDA" = "#619CFF"
+      ),
+      breaks = c("Annual MDA", "Biannual MDA", "Quarterly MDA", "No MDA")
+    ) +
     ggplot2::facet_wrap(~age_band, scales = "free_y") +
     ggplot2::labs(
       title = paste0(
@@ -832,7 +862,13 @@ plot_net_deaths_averted <- function(comparison) {
 
 plot_resistance_endpoint <- function(endpoints) {
   endpoints |>
-    dplyr::filter(scenario %in% c("No MDA", "Annual MDA", "Biannual MDA")) |>
+    dplyr::filter(scenario %in% c("No MDA", "Annual MDA", "Biannual MDA", "Quarterly MDA")) |>
+    dplyr::mutate(
+      scenario = factor(
+        scenario,
+        levels = c("Annual MDA", "Biannual MDA", "Quarterly MDA", "No MDA")
+      )
+    ) |>
     ggplot2::ggplot(ggplot2::aes(
       x = factor(horizon_years),
       y = resistance_prevalence,
@@ -886,12 +922,13 @@ run_main_scenarios <- function(state, parameters) {
 
   specs <- tidyr::expand_grid(
     horizon_years = horizons,
-    scenario = c("No MDA", "Annual MDA", "Biannual MDA")
+    scenario = c("No MDA", "Annual MDA", "Biannual MDA", "Quarterly MDA")
   ) |>
     dplyr::mutate(
       frequency_per_year = dplyr::case_when(
         scenario == "Annual MDA" ~ 1,
         scenario == "Biannual MDA" ~ 2,
+        scenario == "Quarterly MDA" ~ 4,
         TRUE ~ NA_real_
       ),
       # For the long horizon, keep MDA to the first 10 years.
@@ -926,7 +963,8 @@ run_stop_scenarios <- function(state, parameters) {
     dplyr::mutate(
       scenario = dplyr::case_when(
         frequency_per_year == 1 ~ paste0("Annual MDA stopped after ", mda_years, " years"),
-        frequency_per_year == 2 ~ paste0("Biannual MDA stopped after ", mda_years, " years")
+        frequency_per_year == 2 ~ paste0("Biannual MDA stopped after ", mda_years, " years"),
+        frequency_per_year == 4 ~ paste0("Quarterly MDA stopped after ", mda_years, " years")
       ),
       horizon_years = 10
     )
