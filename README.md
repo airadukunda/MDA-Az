@@ -1,107 +1,120 @@
-# Advanced Bacterial Dynamics Model
+# Azithromycin MDA: age-structured AMR transmission models
 
-## 🔬 Model Overview
+R scripts for modelling macrolide-resistant carriage in *Escherichia coli*, *Streptococcus pneumoniae*, and *Staphylococcus aureus* following azithromycin mass drug administration (MDA). The model structure follows the mixed-carriage framework of [Davies et al](https://www.nature.com/articles/s41559-018-0786-x), with age-specific demography and contacts informed by Tanzania (and soon, Malawi and Niger). Main scenarios compare no MDA with annual, twice-yearly, and quarterly MDA, with treatment ending after year 10 in the 20-year simulations.
 
-This advanced computational model simulates bacterial population dynamics, integrating demographic, birth, and contact data to provide a comprehensive understanding of bacterial transmission and resistance.
+## Repository files
 
-## 🌟 Key Features
+| File(s) | Purpose |
+|---|---|
+| `davies_2_8_tidy_{ecoli,spneumo,saureus}.R` | Define pathogen-specific models and run baseline equilibrium, MDA scenarios, summaries and figures. S. pneumoniae also generates the Malawi MORDOR comparison. |
+| `{ecoli,spneumo,saureus}_oat_sensitivity_recalibrated_common_clearance.R` | Define recalibrated one-at-a-time (OAT) sensitivity cases. Re-fit transmission and baseline antibiotic pressure for each case; modify all carriage-clearance rates together for the clearance sensitivity. |
+| `{ecoli,spneumo,saureus}_oat_worker.R` | Run one OAT sensitivity case per `SLURM_ARRAY_TASK_ID`, saving an `.rds` record. |
+| `{ecoli,spneumo,saureus}_oat_combine.R` | Assemble the expected successful worker outputs, validate baseline-fit diagnostics and write OAT summaries / tornado CSVs. |
+| `make_combined_report_figures.R` | Make the three-pathogen 20-year resistance time series and the six-panel annual/biannual **absolute-prevalence** sensitivity figure from saved CSVs. |
+| `plot_oat_tornado_from_existing_csvs.R` | Make annual/biannual tornado plots for **percentage-point increase versus matched no-MDA**, from precomputed tornado CSVs without solving ODEs. |
+| `fitness_cost_half_life_analysis.R` | Optional, computationally intensive fitness-cost analysis for *E. coli* and *S. pneumoniae* only, with post-MDA half-life estimates. |
 
-### Comprehensive Data Integration
-- Population demographics
-- Birth rate data
-- Contact matrix integration
-- Multi-compartment bacterial population tracking
+All scripts are at repository root because they currently source one another by relative filename. Run from that directory.
 
-### Detailed Modeling Aspects
-- Age-stratified population dynamics
-- Sensitive and resistant bacterial strain interactions
-- Co-colonization mechanisms
-- Transmission cost of resistance
+## Required inputs
 
-## 📊 Model Compartments
+Place these four inputs in the repository root, or modify each main model's `config$data_dir` and its `input_files` list:
 
-1. **Uninfected Population** (`X`)
-2. **Sensitive Bacterial Strain** (`S`)
-3. **Resistant Bacterial Strain** (`R`)
-4. **Treated Sensitive Strain** (`Sr`)
-5. **Treated Resistant Strain** (`Rs`)
+```text
+Population_Afro_2023_1yearage.csv
+3.U.1.Birth_1year_Afro.csv
+3.U.1.AFRO_mortality_by_age_group_1yearage.csv
+3.U.1.contact_Tanzania_1y.csv
+```
 
-## 🛠 Technical Specifications
+Install R packages `deSolve`, `dplyr`, `ggplot2`, `purrr`, `readr`, `scales`, `tidyr`, `tibble`, and `stringr`. 
 
-### Transmission Dynamics
-- Strain-specific transmission rates
-- Age-dependent contact patterns
-- Co-colonization efficiency modeling
+The long equilibrium calculations, especially for *S. aureus*, can be computationally expensive.
 
-### Key Parameters
-- Transmission rates
-- Clearance rates
-- Resistance transmission cost
-- Co-colonization efficiency
+## Workflow
 
-## 📦 Dependencies
+```text
+   Demographic and contact inputs
+                |
+                v
+       Pathogen model functions
+          /              \
+         v                v
+ Main scenario runs    Recalibrated OAT cases
+         |                |
+         v                v
+  Scenario CSVs      SLURM case RDS files
+         |                |
+         |                v
+         |          Combine OAT results
+         |                |
+         v                v
+  Combined trajectories and sensitivity figures
 
-- R (version 4.x recommended)
-- Packages:
-  - deSolve
-  - viridis
-  - ggplot2
-  - tidyverse
-  - data.table
-  - patchwork
-  - here
+Optional: fitness-cost analysis -> persistence figures
+```
 
-## 🚀 Installation
+### 1. Run the main models
 
-### R Package Installation
-\`\`\`r
-# Install pacman if not already installed
-install.packages("pacman")
+```bash
+Rscript davies_2_8_tidy_ecoli.R
+Rscript davies_2_8_tidy_spneumo.R
+Rscript davies_2_8_tidy_saureus.R
+```
 
-# Install required packages
-pacman::p_load(
-  deSolve, 
-  viridis, 
-  ggplot2, 
-  tidyverse, 
-  data.table,
-  patchwork,
-  here
-)
-\`\`\`
+They write to `outputs_tanzania_mda/`, `outputs_tanzania_spneumo_mda/`, and `outputs_tanzania_mda_saureus/`, respectively, including `scenario_time_series.csv` and age-stratified outputs.
 
-## 🔧 Usage
+### 2. Run the OAT sensitivity analyses
 
-1. Ensure data files are in the same directory:
-   - \`Population_emro_2023_1yearage.csv\`
-   - \`3_U_1_Birth_1year_emro.csv\`
-   - \`3_U_1_contact_Pakistan_1y.csv\`
+The three `*_oat_sensitivity_recalibrated_common_clearance.R` files define the sensitivity cases and can be run directly, **or** used with the worker scripts to parallelise one case per array task. Do not run both approaches into the same output directory. The worker approach is preferred for the computationally intensive runs.
 
-2. Run the script:
-\`\`\`bash
-Rscript davies_model_advanced.R
-\`\`\`
+To run the first case of each worker locally (expensive):
 
-## 📈 Outputs
+```bash
+SLURM_ARRAY_TASK_ID=1 Rscript ecoli_oat_worker.R
+SLURM_ARRAY_TASK_ID=1 Rscript spneumo_oat_worker.R
+SLURM_ARRAY_TASK_ID=1 Rscript saureus_oat_worker.R
+```
 
-- Bacterial population dynamics visualization
-- CSV file with model results
-- PNG plot of population dynamics
+On SLURM, submit each worker with `--array=1-N`, where `N = nrow(oat_specs)` **for that pathogen**. Each completed task writes `.../sensitivity_oat_<pathogen>_recalibrated/slurm_cases/case_###_<case_id>.rds`; failed tasks produce `_ERROR.rds`.
 
-## 🧪 Customization
+For each sensitivity case, the scripts calibrate transmission and background antibiotic pressure to recover the reference no-MDA carriage and resistance prevalence. The latest cluster copies reject calibration fits more than 1 percentage point from either reference target. Use the resulting `baseline_*_error_pp` columns as a quality check.
 
-Modify the following in the script:
-- \`config$country\`: Change target country
-- Model parameters in \`prepare_model_parameters()\`
-- Initial state conditions
+**Scope:** only annual, biannual and no-MDA sensitivity trajectories are included in the sensitivity analysis
 
-## 🤝 Contributing
+### 3. Combine array results
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+Only after *all* expected worker cases have completed:
 
+```bash
+Rscript ecoli_oat_combine.R
+Rscript spneumo_oat_combine.R
+Rscript saureus_oat_combine.R
+```
 
-[Your contact information]
+The combine scripts read the expected success filenames, reject missing results and unacceptable calibration errors, and ignore unrelated or failed records. They write `{pathogen}_oat_sensitivity_summary.csv`, time-series CSVs, and `{pathogen}_oat_tornado_{annual,biannual}_10y_all_ages.csv` in the corresponding recalibrated sensitivity directory.
+
+### 4. Make combined figures without rerunning the models
+
+```bash
+Rscript make_combined_report_figures.R
+```
+
+This reads the three main scenario CSVs and three **recalibrated** sensitivity-summary CSVs. The 20-year legend order is annual, biannual, quarterly, no MDA. The six-panel OAT figure uses **absolute prevalence among carriers** at ten years.
+
+To instead plot the **increase relative to matched no MDA** using already-processed annual/biannual tornado CSVs:
+
+```bash
+OAT_CSV_DIR=. Rscript plot_oat_tornado_from_existing_csvs.R
+```
+
+`OAT_CSV_DIR` should contain only one version of each input CSV. The plot script stops when it finds ambiguous duplicates.
+
+### 5. Optional post-MDA persistence analysis
+
+```bash
+Rscript fitness_cost_half_life_analysis.R all       # expensive; runs two pathogens
+Rscript fitness_cost_half_life_analysis.R combine   # fast; uses completed CSVs
+```
+
+For two separate cluster processes, run `ecoli` and `spneumo` as the argument, then `combine`. Default: biannual MDA for ten years, then thirty years of follow-up. The figure intentionally excludes *S. aureus* because resistance often does not halve within long follow-up. Results marked `censored = TRUE` are **lower bounds on half-life**, not observed crossing times.
